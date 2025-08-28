@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/julienschmidt/httprouter"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
@@ -52,13 +54,12 @@ func main() {
 	service := user.NewService(repo)
 	handler := user.NewHandler(service)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux := httprouter.New()
+	mux.GET("/", func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		fmt.Fprintf(w, "Welcome to the home page!")
 	})
 
-	//here the route matches exacty and as it does not know about the other routes we have to add the trailing slash
-	mux.Handle("/api/user/", handler.RegisterRoutes(mux))
+	handler.RegisterRoutes(mux)
 
 	log.Println("Server started on port :3220")
 	errr := http.ListenAndServe("localhost:3220", mux)
