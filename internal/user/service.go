@@ -1,7 +1,7 @@
 package user
 
 type Service interface {
-	RegisterNewUser(email, password string) (*User, error)
+	RegisterNewUser(c *CreateUserRequest) error
 }
 
 type service struct {
@@ -12,13 +12,13 @@ func NewService(repo Repository) Service {
 	return &service{repo: repo}
 }
 
-func (s *service) RegisterNewUser(email, password string) (*User, error) {
+func (s *service) RegisterNewUser(c *CreateUserRequest) error {
 
-	newUser := &User{
-		Email:    email,
-		Password: password,
+	_ = &User{
+		Email:    c.Email,
+		Password: c.Password,
 	}
 
 	//processing logic
-	return newUser, nil
+	return nil
 }

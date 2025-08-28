@@ -50,7 +50,7 @@ func main() {
 	}
 
 	// --- repository stuff ---
-	repo := user.NewRepo(db)
+	repo := user.NewRepo(pool)
 	service := user.NewService(repo)
 	handler := user.NewHandler(service)
 
