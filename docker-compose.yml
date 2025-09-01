@@ -1,0 +1,12 @@
+services:
+  users_test:
+    image: postgres:15-alpine
+    container_name: chirpstream-test-db
+    environment:
+      env_file: "config.yaml"
+      required: true
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: chirpstream_test
+    ports:
+      - "5469:5432"

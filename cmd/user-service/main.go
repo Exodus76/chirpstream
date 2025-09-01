@@ -18,7 +18,7 @@ import (
 )
 
 func main() {
-	cfg, err := config.Init()
+	cfg, err := config.Init(".")
 	if err != nil {
 		log.Fatalf("Cant parse config file %v\n", err)
 	}

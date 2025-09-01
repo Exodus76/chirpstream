@@ -7,6 +7,14 @@ build:
 run: build
 	./bin/chirpstream-user
 
+
+SHELL := /bin/bash
+
+test:
+	@docker compose up -d
+	@trap 'echo "removing db"; docker compose -f docker-compose.yml down' EXIT
+	@go test -v ./internal/user
+
 clean:
 	rm -rf bin/
 

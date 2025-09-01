@@ -19,14 +19,15 @@ type DBConfig struct {
 
 type Config struct {
 	Databases struct {
-		Users DBConfig `yaml:"users"`
+		Users      DBConfig `yaml:"users"`
+		Users_Test DBConfig `yaml:"users_test"`
 	} `yaml:"databases"`
 }
 
-func Init() (config Config, err error) {
+func Init(configPath string) (config Config, err error) {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
+	viper.AddConfigPath(configPath)
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 

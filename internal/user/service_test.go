@@ -43,7 +43,7 @@ func TestService_handleCreateUser(t *testing.T) {
 				ms.On("CreateUser", mock.Anything, mock.AnythingOfType("*user.User")).Return(nil)
 			},
 			expectedStatus: http.StatusCreated,
-			expectedError:  true,
+			expectedError:  false,
 		},
 	}
 
