@@ -3,9 +3,10 @@ package user
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/julienschmidt/httprouter"
 )
 
@@ -18,14 +19,24 @@ func NewHandler(s Service) *Handler {
 }
 
 type CreateUserRequest struct {
+	Name     string `json:"name"`
 	Email    string `json:"email"`
-	UserName string `json:"username"`
 	Password string `json:"password"`
 }
 
 type CreateLoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+type LoginResponse struct {
+	Token  string `json:"token"`
+	UserID int64  `json:"id"`
+}
+
+type customClaim struct {
+	UserID int64 `json:"user"`
+	jwt.RegisteredClaims
 }
 
 func authMiddleware(next httprouter.Handle) httprouter.Handle {
@@ -45,30 +56,71 @@ func (h *Handler) RegisterRoutes(router *httprouter.Router) {
 func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var req CreateUserRequest
 
+	ctx := r.Context()
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	err := h.service.RegisterNewUser(&req)
+	err := h.service.CreateUser(ctx, req.Name, req.Email, req.Password)
 	if err != nil {
-		log.Printf("Error registering new user %v \n", err)
+		// log.Printf("Error registering new user %v \n", err)
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+
+	response := map[string]string{"message": "User created successfully"}
+	json.NewEncoder(w).Encode(response)
 }
 
 func (h *Handler) handleUserLogin(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var req CreateLoginRequest
 
+	ctx := r.Context()
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	fmt.Fprintf(w, "handle login user")
+	user, err := h.service.VerifyUser(ctx, req.Email)
+	if err != nil {
+		return
+	}
+
+	if user == nil {
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		return
+	}
+
+	claims := &customClaim{
+		user.ID,
+		jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			Issuer:    "Chirpstream",
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	ss, err := token.SignedString("mykey")
+	if err != nil {
+		return
+	}
+
+	response := LoginResponse{
+		ss,
+		user.ID,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Authorization", ss)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 func (h *Handler) handleGetuser(w http.ResponseWriter, r *http.Request, p httprouter.Params) {

@@ -23,30 +23,17 @@ func main() {
 		log.Fatalf("Cant parse config file %v\n", err)
 	}
 
-	DBPoolConf(cfg.Databases.Users)
-
-	// --- Migration stuff ---
-
-	migrationDir := "internal/data/migrations"
-
-	fmt.Println("Running db migrations...")
-
-	db, err := GetStdlibDB()
+	pool, err := NewDBPool(cfg.Databases.Users)
 	if err != nil {
-		log.Fatalf("Failed to get standard DB connection for migration %v\n", err)
+		log.Fatalf("Failed to create database pool: %v\n", err)
 	}
 
-	//get the handle and then defer closing it
-	defer func(db *sql.DB) {
-		err := db.Close()
-		if err != nil {
-			log.Printf("WARN: Error closing migration DB handle: %v\n", err)
-		}
-	}(db)
+	defer CloseDB(pool)
 
-	error := goose.Up(db, migrationDir)
-	if error != nil {
-		log.Fatalf("Failed to run migrations %v\n", error)
+	// --- Migration stuff ---
+	err = gooseMigrations(pool)
+	if err != nil {
+		log.Fatalf("Failed to run migration: %v\n", err)
 	}
 
 	// --- repository stuff ---
@@ -68,13 +55,14 @@ func main() {
 	}
 }
 
-var pool *pgxpool.Pool
+func NewDBPool(conf config.DBConfig) (*pgxpool.Pool, error) {
+	config, err := pgxpool.ParseConfig(conf.DBConnstring())
+	if err != nil {
+		log.Fatalf("Failed to create initial pgxpool config: %v\n", err)
+		os.Exit(1)
+	}
 
-func DBPoolConf(dconf config.DBConfig) {
-
-	config, err := pgxpool.ParseConfig(dconf.DBConnstring())
-
-	pool, err = pgxpool.NewWithConfig(context.Background(), config)
+	pool, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
 		log.Fatalf("Unable to create connection pool: %v\n", err)
 		os.Exit(1)
@@ -86,11 +74,13 @@ func DBPoolConf(dconf config.DBConfig) {
 	}
 
 	fmt.Println("Database Connection pool initialized successfully")
+
+	return pool, err
 }
 
 // GetStdlibDB returns a standard *sql.DB connection pool, needed for goose.
 // Imp: close this DB handle when done.
-func GetStdlibDB() (*sql.DB, error) {
+func GetStdlibDB(pool *pgxpool.Pool) (*sql.DB, error) {
 	if pool == nil {
 		return nil, fmt.Errorf("database pool not initialized")
 	}
@@ -104,9 +94,38 @@ func GetStdlibDB() (*sql.DB, error) {
 	return stdlibDB, nil
 }
 
-func CloseDB() {
+func CloseDB(pool *pgxpool.Pool) {
 	if pool != nil {
 		pool.Close()
 		fmt.Println("Database connection pool closed.")
 	}
+}
+
+func gooseMigrations(pool *pgxpool.Pool) error {
+
+	migrationDir := "internal/data/migrations"
+
+	fmt.Println("Running db migrations...")
+
+	db, err := GetStdlibDB(pool)
+	if err != nil {
+		return fmt.Errorf("Failed to get standard DB connection for migration %v\n", err)
+	}
+
+	//get the handle and then defer closing it
+	defer func(db *sql.DB) error {
+		err := db.Close()
+		if err != nil {
+			return fmt.Errorf("WARN: Error closing migration DB handle: %v\n", err)
+		}
+
+		return err
+	}(db)
+
+	error := goose.Up(db, migrationDir)
+	if error != nil {
+		return fmt.Errorf("Failed to run migrations %v\n", error)
+	}
+
+	return err
 }

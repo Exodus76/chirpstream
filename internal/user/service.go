@@ -1,7 +1,16 @@
 package user
 
+import (
+	"context"
+	"fmt"
+
+	"golang.org/x/crypto/bcrypt"
+)
+
 type Service interface {
-	RegisterNewUser(c *CreateUserRequest) error
+	CreateUser(ctx context.Context, name, email, password string) error
+	VerifyUser(ctx context.Context, email string) (*User, error)
+	DeleteUser(ctx context.Context, id int) error
 }
 
 type service struct {
@@ -12,13 +21,62 @@ func NewService(repo Repository) Service {
 	return &service{repo: repo}
 }
 
-func (s *service) RegisterNewUser(c *CreateUserRequest) error {
+func (s *service) CreateUser(ctx context.Context, name, email, password string) error {
 
-	_ = &User{
-		Email:    c.Email,
-		Password: c.Password,
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+	if err != nil {
+		return fmt.Errorf("Error encrypting password %w", err)
 	}
 
-	//processing logic
+	newUser := &User{
+		Email:    email,
+		Password: string(hashedPassword),
+	}
+
+	err = s.repo.CreateUser(ctx, newUser)
+	if err != nil {
+		return fmt.Errorf("Error creating user %w", err)
+	}
+
 	return nil
 }
+
+func (s *service) VerifyUser(ctx context.Context, email string) (*User, error) {
+	panic("not implemented") // TODO: Implement
+}
+
+func (s *service) DeleteUser(ctx context.Context, id int) error {
+	panic("not implemented") // TODO: Implement
+}
+
+//backup
+// func (s *service) CreateUser(ctx context.Context, name, email, password string) error {
+//
+// 	tx, err := s.pool.Begin(ctx)
+// 	if err != nil {
+// 		return fmt.Errorf("could not begin transaction: %w", err)
+// 	}
+//
+// 	defer tx.Rollback(ctx)
+//
+// 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+// 	if err != nil {
+// 		return fmt.Errorf("Error encrypting password %w", err)
+// 	}
+//
+// 	newUser := &User{
+// 		Email:    email,
+// 		Password: string(hashedPassword),
+// 	}
+//
+// 	err = s.repo.CreateUser(ctx, newUser)
+// 	if err != nil {
+// 		return fmt.Errorf("Error creating user %w", err)
+// 	}
+//
+// 	if err := tx.Commit(ctx); err != nil {
+// 		return fmt.Errorf("could not commit transaction: %w", err)
+// 	}
+//
+// 	return nil
+// }

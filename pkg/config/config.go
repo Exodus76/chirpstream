@@ -40,7 +40,7 @@ func Init() (config Config, err error) {
 }
 
 func (db *DBConfig) DBConnstring() string {
-	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
-		db.Host, db.Port, db.User, db.Password, db.DBName,
+	return fmt.Sprintf("%s://%s:%s@%s:%d/%s?sslmode=disable",
+		db.Driver, db.User, db.Password, db.Host, int(db.Port), db.DBName,
 	)
 }
