@@ -10,13 +10,13 @@ import (
 )
 
 type User struct {
-	ID        int64     `json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	UserName  string    `json:"username.omitempty"`
-	Password  string    `json:"-"`
-	Active    bool      `json:"active"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID         int64     `json:"id"`
+	Name       string    `json:"name"`
+	Email      string    `json:"email"`
+	User_name  string    `json:"username.omitempty"`
+	Password   string    `json:"-"`
+	Active     bool      `json:"active"`
+	Created_at time.Time `json:"created_at"`
 }
 
 type Repository interface {
@@ -56,14 +56,14 @@ func (r *dbUserRepository) GetUserByEmail(ctx context.Context, email string) (*U
 		&user.Email,
 		&user.Password,
 		&user.Active,
-		&user.UserName,
-		&user.CreatedAt,
+		&user.User_name,
+		&user.Created_at,
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("user not found")
 		}
-		return nil, fmt.Errorf("could not find user: %w", err)
+		return nil, fmt.Errorf("Error running query %w", err)
 	}
 
 	return &user, nil
@@ -98,8 +98,8 @@ func (r *dbUserRepository) DeleteUser(ctx context.Context, id int) error {
 	}
 
 	if commandTag.RowsAffected() != 1 {
-		return fmt.Errorf("could not find user: %w", err)
+		return fmt.Errorf("could not delete user: %w", err)
 	}
 
-	return err
+	return nil
 }

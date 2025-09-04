@@ -3,6 +3,7 @@ package user
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -63,9 +64,11 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request, _ htt
 		return
 	}
 
+	defer r.Body.Close()
+
 	err := h.service.CreateUser(ctx, req.Name, req.Email, req.Password)
 	if err != nil {
-		// log.Printf("Error registering new user %v \n", err)
+		log.Printf("ERROR: registering new user %w \n", err)
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
@@ -89,6 +92,7 @@ func (h *Handler) handleUserLogin(w http.ResponseWriter, r *http.Request, _ http
 
 	user, err := h.service.VerifyUser(ctx, req.Email)
 	if err != nil {
+		log.Printf("ERROR: verifying user %w \n", err)
 		return
 	}
 
