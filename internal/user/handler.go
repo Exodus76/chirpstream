@@ -1,8 +1,10 @@
 package user
 
 import (
+	"chirpstream/internal/auth"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -34,23 +36,12 @@ type LoginResponse struct {
 	UserID int64  `json:"id"`
 }
 
-type customClaim struct {
-	UserID int64 `json:"user"`
-	jwt.RegisteredClaims
-}
-
-func authMiddleware(next httprouter.Handle) httprouter.Handle {
-	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-		next(w, r, p)
-	}
-}
-
 // router mux same stuff
 func (h *Handler) RegisterRoutes(router *httprouter.Router) {
 	router.POST("/api/user/register", h.handleCreateUser)
 	router.POST("/api/user/login", h.handleUserLogin)
 
-	router.GET("/api/user/getUser/:id", authMiddleware(h.handleGetuser))
+	router.GET("/api/user/getUser/:id", auth.AuthMiddleware(h.handleGetuser))
 }
 
 func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -83,9 +74,12 @@ func (h *Handler) handleUserLogin(w http.ResponseWriter, r *http.Request, _ http
 	ctx := r.Context()
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("ERROR: error parsing request %v", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
+
+	defer r.Body.Close()
 
 	user, err := h.service.VerifyUser(ctx, req.Email)
 	if err != nil {

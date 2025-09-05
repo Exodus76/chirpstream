@@ -21,6 +21,7 @@ type Config struct {
 	Databases struct {
 		Users      DBConfig `yaml:"users"`
 		Users_Test DBConfig `yaml:"users_test"`
+		Chirps     DBConfig `yaml:"chirps"`
 	} `yaml:"databases"`
 }
 
