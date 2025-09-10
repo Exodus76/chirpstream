@@ -8,6 +8,7 @@ import (
 type Service interface {
 	CreateChirp(ctx context.Context, content string, user_id int) error
 	GetChirpById(ctx context.Context, id int) (*Chirps, error)
+	GetChirpWithLikesById(ctx context.Context, id int) (*ChirpWithLikes, error)
 	GetChirpsByUserId(ctx context.Context, user_id int) ([]Chirps, error)
 	UpdateChirp(ctx context.Context, id int, content string) error
 	DeleteChirp(ctx context.Context, id int) error
@@ -47,6 +48,21 @@ func (s *service) GetChirpById(ctx context.Context, id int) (*Chirps, error) {
 	return chirp, nil
 }
 
+func (s *service) GetChirpWithLikesById(ctx context.Context, id int) (*ChirpWithLikes, error) {
+	var chirp *ChirpWithLikes
+	var err error
+
+	chirp, err = s.repo.GetChirpWithLikesById(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("Error getting chirp by id %w", err)
+	}
+	if chirp == nil {
+		return nil, fmt.Errorf("No chirp with this id %w", err)
+	}
+
+	return chirp, nil
+}
+
 func (s *service) GetChirpsByUserId(ctx context.Context, user_id int) ([]Chirps, error) {
 	var chirp []Chirps
 
@@ -67,7 +83,7 @@ func (s *service) UpdateChirp(ctx context.Context, id int, content string) error
 	if err != nil {
 		return fmt.Errorf("Error getting chirp by id %w", err)
 	}
-	if chirp != nil {
+	if chirp == nil {
 		return fmt.Errorf("No chirp with this id %w", err)
 	}
 
@@ -87,7 +103,7 @@ func (s *service) DeleteChirp(ctx context.Context, id int) error {
 	if err != nil {
 		return fmt.Errorf("Error getting chirp by id %w", err)
 	}
-	if chirp != nil {
+	if chirp == nil {
 		return fmt.Errorf("No chirp with this id %w", err)
 	}
 

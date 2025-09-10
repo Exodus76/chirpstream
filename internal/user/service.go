@@ -9,7 +9,7 @@ import (
 
 type Service interface {
 	CreateUser(ctx context.Context, name, email, password string) error
-	VerifyUser(ctx context.Context, email string) (*User, error)
+	VerifyUser(ctx context.Context, email string, password string) (*User, error)
 	DeleteUser(ctx context.Context, id int) error
 }
 
@@ -41,8 +41,22 @@ func (s *service) CreateUser(ctx context.Context, name, email, password string) 
 	return nil
 }
 
-func (s *service) VerifyUser(ctx context.Context, email string) (*User, error) {
-	panic("not implemented") // TODO: Implement
+func (s *service) VerifyUser(ctx context.Context, email string, password string) (*User, error) {
+	user, err := s.repo.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil, fmt.Errorf("Error fetching user %w", err)
+	}
+
+	if user == nil {
+		return nil, fmt.Errorf("No user with this email %w", user.Email)
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	if err != nil {
+		return nil, fmt.Errorf("Error verifying password %w", err)
+	}
+
+	return user, nil
 }
 
 func (s *service) DeleteUser(ctx context.Context, id int) error {

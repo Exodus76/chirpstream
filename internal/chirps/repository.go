@@ -3,11 +3,20 @@ package chirps
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+type ChirpWithLikes struct {
+	ID         int       `json:"id"`
+	Content    string    `json:"content"`
+	User_id    int       `json:"user_id"`
+	Created_at time.Time `json:"time"`
+	Like_count int64     `json:"like_count"`
+}
 
 type Chirps struct {
 	ID         int       `json:"id"`
@@ -19,6 +28,7 @@ type Chirps struct {
 type Repository interface {
 	CreateChirp(ctx context.Context, content string, user_id int) error
 	GetChirpById(ctx context.Context, id int) (*Chirps, error)
+	GetChirpWithLikesById(ctx context.Context, id int) (*ChirpWithLikes, error)
 	GetChirpsByUserId(ctx context.Context, user_id int) ([]Chirps, error)
 	UpdateChirp(ctx context.Context, id int, content string) error
 	DeleteChirp(ctx context.Context, id int) error
@@ -44,17 +54,44 @@ func (dc *dbChirpRepository) CreateChirp(ctx context.Context, content string, us
 	return nil
 }
 
+func (dc *dbChirpRepository) GetChirpWithLikesById(ctx context.Context, id int) (*ChirpWithLikes, error) {
+	var chirp ChirpWithLikes
+
+	query := "SELECT c.id, c.content, c.user_id, c.created_at, COUNT(cl.chirp_id) AS like_count FROM chirps c LEFT JOIN chirp_likes cl ON c.id=cl.chirp_id WHERE c.id=$1::int GROUP BY c.id"
+
+	err := dc.db.QueryRow(ctx, query, id).Scan(
+		&chirp.ID,
+		&chirp.Content,
+		&chirp.User_id,
+		&chirp.Created_at,
+		&chirp.Like_count,
+	)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("No post with this id %v", err)
+		}
+
+		return nil, fmt.Errorf("Error executing query %v", err)
+	}
+
+	return &chirp, nil
+
+}
+
 func (dc *dbChirpRepository) GetChirpById(ctx context.Context, id int) (*Chirps, error) {
 	var chirp Chirps
 	query := "SELECT * FROM Chirps WHERE id=$1"
 
-	err := dc.db.QueryRow(ctx, query).Scan(
+	err := dc.db.QueryRow(ctx, query, id).Scan(
 		&chirp.ID,
 		&chirp.Content,
 		&chirp.User_id,
 		&chirp.Created_at,
 	)
+
 	if err != nil {
+		log.Printf("!! ERROR !! %v", err)
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("No post with this id %d", id)
 		}

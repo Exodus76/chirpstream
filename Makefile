@@ -1,12 +1,17 @@
 #Makefile
 all: build
 
-build:
+build-user-service:
 	go build -ldflags="-s -w" -o bin/chirpstream-user cmd/user-service/main.go
 
-run: build
+build-chirp-service:
+	go build -ldflags="-s -w" -o bin/chirpstream-chirps cmd/chirp-service/main.go
+
+run-user: build-user-service
 	./bin/chirpstream-user
 
+run-chirp: build-chirp-service
+	./bin/chirpstream-chirps
 
 SHELL := /bin/bash
 

@@ -49,16 +49,17 @@ func (r *dbUserRepository) CreateUser(ctx context.Context, user *User) error {
 
 func (r *dbUserRepository) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	var user User
-	query := "SELECT id, email, password, active, userName, created_at FROM Users WHERE email=$1"
+	query := "SELECT id, name, email, password, active, created_at FROM Users WHERE email = $1"
 
-	err := r.db.QueryRow(ctx, query, user.Email).Scan(
+	err := r.db.QueryRow(ctx, query, email).Scan(
 		&user.ID,
+		&user.Name,
 		&user.Email,
 		&user.Password,
 		&user.Active,
-		&user.UserName,
 		&user.CreatedAt,
 	)
+
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("user not found")

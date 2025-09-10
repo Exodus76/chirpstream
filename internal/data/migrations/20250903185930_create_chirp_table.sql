@@ -2,8 +2,8 @@
 -- +goose StatementBegin
 CREATE TABLE Chirps (
     id SERIAL PRIMARY KEY,
-    content TEXT NOT NULL,
     user_id int NOT NULL,
+    content TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT NOW()
 )
 -- +goose StatementEnd

@@ -3,7 +3,9 @@ package chirps
 import (
 	"chirpstream/internal/auth"
 	"encoding/json"
+	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -28,9 +30,9 @@ func (h *Handler) RegisterRoutes(router *httprouter.Router) {
 	router.POST("/api/chirp/create", auth.AuthMiddleware(h.handleCreateChirp))
 	router.POST("/api/chirp/update", auth.AuthMiddleware(h.handleUpdateChirp))
 
-	router.POST("/api/chirp/getChripById", auth.AuthMiddleware(h.handleGetChirpById))
+	router.GET("/api/chirp/getChirpById/:chirpId", auth.AuthMiddleware(h.handleGetChirpById))
 
-	router.POST("/api/chirp/getChirpsByUserId", auth.AuthMiddleware(h.handleGetChirpsByUserId))
+	router.GET("/api/chirp/getChirpsByUserId/:userId", auth.AuthMiddleware(h.handleGetChirpsByUserId))
 }
 
 func (h *Handler) handleCreateChirp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -39,17 +41,20 @@ func (h *Handler) handleCreateChirp(w http.ResponseWriter, r *http.Request, _ ht
 	ctx := r.Context()
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("Error decoding json body %v\n", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
 	}
 
 	defer r.Body.Close()
 
 	user := r.Context().Value("user").(*auth.CustomClaim)
 
-	//do the jwt stuuff before implementing this
 	err := h.service.CreateChirp(ctx, req.Content, int(user.UserID))
 	if err != nil {
-		http.Error(w, "Something went wrong", http.StatusBadRequest)
+		log.Printf("Error creating chirp %v\n", err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -60,10 +65,41 @@ func (h *Handler) handleUpdateChirp(w http.ResponseWriter, r *http.Request, _ ht
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
 	}
 }
 
-func (h *Handler) handleGetChirpById(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {}
+func (h *Handler) handleGetChirpById(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	var chirp *ChirpWithLikes
+	var err error
+	ctx := r.Context()
+
+	chirpIdParam := p.ByName("chirpId")
+
+	id, err := strconv.Atoi(chirpIdParam)
+	if err != nil {
+		log.Printf("Error converting paramter to int: %v", err)
+		http.Error(w, "Invalid param value", http.StatusBadRequest)
+		return
+	}
+
+	chirp, err = h.service.GetChirpWithLikesById(ctx, id)
+	if err != nil {
+		log.Printf("Error: cant get chirp %v\n", err)
+		http.Error(w, "No chirp found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	payload, err := json.Marshal(chirp)
+	if err != nil {
+		log.Printf("Error marshalling JSON: %v\n", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write(payload)
+}
 
 func (h *Handler) handleGetChirpsByUserId(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 }

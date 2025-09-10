@@ -81,8 +81,10 @@ func (h *Handler) handleUserLogin(w http.ResponseWriter, r *http.Request, _ http
 
 	defer r.Body.Close()
 
-	user, err := h.service.VerifyUser(ctx, req.Email)
+	user, err := h.service.VerifyUser(ctx, req.Email, req.Password)
 	if err != nil {
+		log.Printf("ERROR: error verifying %v\n", err)
+		http.Error(w, "Something went wrong", http.StatusUnauthorized)
 		return
 	}
 
@@ -91,9 +93,9 @@ func (h *Handler) handleUserLogin(w http.ResponseWriter, r *http.Request, _ http
 		return
 	}
 
-	claims := &customClaim{
-		user.ID,
-		jwt.RegisteredClaims{
+	claims := &auth.CustomClaim{
+		UserID: user.ID,
+		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			Issuer:    "Chirpstream",
 		},
@@ -101,8 +103,9 @@ func (h *Handler) handleUserLogin(w http.ResponseWriter, r *http.Request, _ http
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	ss, err := token.SignedString("mykey")
+	ss, err := token.SignedString([]byte("mykey"))
 	if err != nil {
+		log.Printf("ERROR: error signing string %w", err)
 		return
 	}
 
