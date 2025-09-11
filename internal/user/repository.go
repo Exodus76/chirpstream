@@ -37,12 +37,10 @@ func (r *dbUserRepository) CreateUser(ctx context.Context, user *User) error {
 
 	query := "INSERT INTO Users (name, email, password, active) VALUES($1, $2, $3, true)"
 
-	commandTag, err := r.db.Exec(ctx, query, user.Name, user.Email, user.Password)
+	_, err := r.db.Exec(ctx, query, user.Name, user.Email, user.Password)
 	if err != nil {
-		return fmt.Errorf("could not create user: %w", err)
+		return fmt.Errorf("CreateUser: could not insert user: %w", err)
 	}
-
-	fmt.Printf("commandTag: %v\n", commandTag)
 
 	return nil
 }
@@ -61,9 +59,9 @@ func (r *dbUserRepository) GetUserByEmail(ctx context.Context, email string) (*U
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("user not found")
+			return nil, fmt.Errorf("GetUserByEmail: no user with this email: %s %w", email, err)
 		}
-		return nil, fmt.Errorf("Error running query %w", err)
+		return nil, fmt.Errorf("GetUserbyEmail: failed to execute query %w", err)
 	}
 
 	return &user, nil
@@ -98,7 +96,7 @@ func (r *dbUserRepository) DeleteUser(ctx context.Context, id int) error {
 	}
 
 	if commandTag.RowsAffected() != 1 {
-		return fmt.Errorf("could not delete user: %w", err)
+		return fmt.Errorf("DeleteUser: could not delete user with id:%d %w", id, err)
 	}
 
 	return nil

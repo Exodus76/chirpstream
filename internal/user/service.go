@@ -25,7 +25,7 @@ func (s *service) CreateUser(ctx context.Context, name, email, password string) 
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	if err != nil {
-		return fmt.Errorf("Error encrypting password %w", err)
+		return fmt.Errorf("CreateUser: failed to encrypt password %w", err)
 	}
 
 	newUser := &User{
@@ -35,7 +35,7 @@ func (s *service) CreateUser(ctx context.Context, name, email, password string) 
 
 	err = s.repo.CreateUser(ctx, newUser)
 	if err != nil {
-		return fmt.Errorf("Error creating user %w", err)
+		return fmt.Errorf("CreateUser: failed to create user %w", err)
 	}
 
 	return nil
