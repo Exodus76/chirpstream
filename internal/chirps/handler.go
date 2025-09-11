@@ -41,7 +41,7 @@ func (h *Handler) handleCreateChirp(w http.ResponseWriter, r *http.Request, _ ht
 	ctx := r.Context()
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		log.Printf("Error decoding json body %v\n", err)
+		log.Printf("Error: failed decoding json body %v\n", err)
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
@@ -52,7 +52,7 @@ func (h *Handler) handleCreateChirp(w http.ResponseWriter, r *http.Request, _ ht
 
 	err := h.service.CreateChirp(ctx, req.Content, int(user.UserID))
 	if err != nil {
-		log.Printf("Error creating chirp %v\n", err)
+		log.Printf("Error: failed creating chirp %v\n", err)
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
@@ -78,7 +78,7 @@ func (h *Handler) handleGetChirpById(w http.ResponseWriter, r *http.Request, p h
 
 	id, err := strconv.Atoi(chirpIdParam)
 	if err != nil {
-		log.Printf("Error converting paramter to int: %v", err)
+		log.Printf("Error: failed converting paramter to int: %v\n", err)
 		http.Error(w, "Invalid param value", http.StatusBadRequest)
 		return
 	}
@@ -93,7 +93,7 @@ func (h *Handler) handleGetChirpById(w http.ResponseWriter, r *http.Request, p h
 	w.Header().Set("Content-Type", "application/json")
 	payload, err := json.Marshal(chirp)
 	if err != nil {
-		log.Printf("Error marshalling JSON: %v\n", err)
+		log.Printf("Error: marshalling JSON: %v\n", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

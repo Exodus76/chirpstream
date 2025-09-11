@@ -3,7 +3,6 @@ package chirps
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -14,7 +13,7 @@ type ChirpWithLikes struct {
 	ID         int       `json:"id"`
 	Content    string    `json:"content"`
 	User_id    int       `json:"user_id"`
-	Created_at time.Time `json:"time"`
+	Created_at time.Time `json:"created_at"`
 	Like_count int64     `json:"like_count"`
 }
 
@@ -22,7 +21,7 @@ type Chirps struct {
 	ID         int       `json:"id"`
 	Content    string    `json:"content"`
 	User_id    int       `json:"user_id"`
-	Created_at time.Time `json:"time"`
+	Created_at time.Time `json:"created_at"`
 }
 
 type Repository interface {
@@ -48,7 +47,7 @@ func (dc *dbChirpRepository) CreateChirp(ctx context.Context, content string, us
 
 	_, err := dc.db.Exec(ctx, query, content, user_id)
 	if err != nil {
-		return fmt.Errorf("Could not add new post: %w", err)
+		return fmt.Errorf("CreateChirp: could not insert new chirp: %w", err)
 	}
 
 	return nil
@@ -69,10 +68,10 @@ func (dc *dbChirpRepository) GetChirpWithLikesById(ctx context.Context, id int) 
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("No post with this id %v", err)
+			return nil, fmt.Errorf("GetChirpWithLikesById: chirp with id %d not found", err)
 		}
 
-		return nil, fmt.Errorf("Error executing query %v", err)
+		return nil, fmt.Errorf("GetChirpWithLikesById: Error executing query %w", err)
 	}
 
 	return &chirp, nil
@@ -91,12 +90,11 @@ func (dc *dbChirpRepository) GetChirpById(ctx context.Context, id int) (*Chirps,
 	)
 
 	if err != nil {
-		log.Printf("!! ERROR !! %v", err)
 		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("No post with this id %d", id)
+			return nil, fmt.Errorf("GetChirpById: chirp with id %d not found", err)
 		}
 
-		return nil, fmt.Errorf("Error executing query %w", err)
+		return nil, fmt.Errorf("GetChirpById: cant execute query %w", err)
 	}
 
 	return &chirp, nil
@@ -110,12 +108,12 @@ func (dc *dbChirpRepository) GetChirpsByUserId(ctx context.Context, user_id int)
 
 	rows, err := dc.db.Query(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("Error executing query %w", err)
+		return nil, fmt.Errorf("GetChirpsByUserId: cant execute query %w", err)
 	}
 
 	chirps, err = pgx.CollectRows(rows, pgx.RowToStructByName[Chirps])
 	if err != nil {
-		return nil, fmt.Errorf("CollectRows error: %v", err)
+		return nil, fmt.Errorf("GetChirpByUserId: cant getting rows %w", err)
 	}
 
 	return chirps, nil
@@ -135,20 +133,20 @@ func (dc *dbChirpRepository) UpdateChirp(ctx context.Context, id int, content st
 	)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return fmt.Errorf("No chirp with id %d", id)
+			return fmt.Errorf("UpdateChirp: chirp with id %d not found", id)
 		}
-		return fmt.Errorf("Error running query %w", err)
+		return fmt.Errorf("UpdateChirp: cant execute select query %w", err)
 	}
 
 	updateQuery := "UPDATE Chirps SET content=$1 WHERE id=$2"
 
 	commandTag, err := dc.db.Exec(ctx, updateQuery, content, id)
 	if err != nil {
-		return fmt.Errorf("Error executing update query")
+		return fmt.Errorf("UpdateChirp: cant execute update query")
 	}
 
 	if commandTag.RowsAffected() != 1 {
-		return fmt.Errorf("Could not find post with the id %d", id)
+		return fmt.Errorf("UpdateChirp: chirp with id %d not found", id)
 	}
 
 	return nil
@@ -159,11 +157,11 @@ func (dc *dbChirpRepository) DeleteChirp(ctx context.Context, id int) error {
 
 	commandTag, err := dc.db.Exec(ctx, query)
 	if err != nil {
-		return err
+		return fmt.Errorf("DeleteChirp: could not execute delete query %w", err)
 	}
 
 	if commandTag.RowsAffected() != 1 {
-		return fmt.Errorf("could not delete post: %w", err)
+		return fmt.Errorf("DeleteChirp: could not delete post: %w", err)
 	}
 
 	return nil
