@@ -55,12 +55,12 @@ func TestRepo_handleCreateUser(t *testing.T) {
 	require.NoError(t, err)
 
 	newUser := &User{
-		Name:      "Test",
-		Email:     "test@test.com",
-		UserName:  "mridul",
-		Password:  "password",
-		Active:    false,
-		CreatedAt: time.Time{},
+		Name:       "Test",
+		Email:      "test@test.com",
+		User_name:  "mridul",
+		Password:   "password",
+		Active:     false,
+		Created_at: time.Time{},
 	}
 
 	err = testRepo.CreateUser(context.Background(), newUser)

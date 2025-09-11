@@ -48,7 +48,7 @@ func (s *service) VerifyUser(ctx context.Context, email string, password string)
 	}
 
 	if user == nil {
-		return nil, fmt.Errorf("No user with this email %w", user.Email)
+		return nil, fmt.Errorf("No user with this email %s, %w", email, err)
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))

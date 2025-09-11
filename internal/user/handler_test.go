@@ -23,7 +23,7 @@ func (m *MockService) CreateUser(ctx context.Context, name, email, password stri
 	return args.Error(0)
 }
 
-func (m *MockService) VerifyUser(ctx context.Context, email string) (*User, error) {
+func (m *MockService) VerifyUser(ctx context.Context, email string, password string) (*User, error) {
 	return nil, nil
 }
 
