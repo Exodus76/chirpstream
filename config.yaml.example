@@ -1,0 +1,35 @@
+databases:
+  users:
+    driver: "postgres"
+    host: "127.0.0.1"
+    port: 5432
+    user: "postgres"
+    password: "password"
+    dbname: "chirpstream"
+  users_test:
+    driver: "postgres"
+    host: "127.0.0.1"
+    port: 5469
+    user: "test"
+    password: "test"
+    dbname: "test"
+  chirps:
+    driver: "postgres"
+    host: "127.0.0.1"
+    port: 5432
+    user: "postgres"
+    password: "password"
+    dbname: "chirpstream"
+  feeds:
+    driver: "cql"
+    host: "scylla-node1"
+    port: 9042
+    keyspace: "chirpstream_feeds"
+    user: "feed_svc_user"
+    password: "your_feed_password"
+
+
+goose:
+  goose_driver: "postgres"
+  goose_dbstring: "postgres://user:password@localhost:5432/test?sslmode=disable"
+  goose_migration_dir: "./internal/data/migrations"

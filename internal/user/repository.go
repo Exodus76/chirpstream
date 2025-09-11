@@ -55,7 +55,7 @@ func (r *dbUserRepository) GetUserByEmail(ctx context.Context, email string) (*U
 		&user.Email,
 		&user.Password,
 		&user.Active,
-		&user.CreatedAt,
+		&user.Created_at,
 	)
 
 	if err != nil {
