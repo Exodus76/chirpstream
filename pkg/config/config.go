@@ -7,6 +7,10 @@ import (
 	"github.com/spf13/viper"
 )
 
+type ServiceConfig struct {
+	Addr string `yaml:"addr"`
+}
+
 type DBConfig struct {
 	Driver   string `yaml:"driver"`
 	Host     string `yaml:"host"`
@@ -23,6 +27,9 @@ type Config struct {
 		Users_Test DBConfig `yaml:"users_test"`
 		Chirps     DBConfig `yaml:"chirps"`
 	} `yaml:"databases"`
+	API_Gateway   ServiceConfig `yaml:"api_gateway"`
+	User_Service  ServiceConfig `yaml:"user_service"`
+	Chirp_Service ServiceConfig `yaml:"chirp_service"`
 }
 
 func Init(configPath string) (config Config, err error) {

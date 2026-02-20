@@ -58,7 +58,7 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request, _ htt
 
 	err := h.service.CreateUser(ctx, req.Name, req.Email, req.Password)
 	if err != nil {
-		log.Printf("ERROR: registering new user %w \n", err)
+		log.Printf("ERROR: registering new user %v \n", err)
 		http.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
@@ -107,7 +107,7 @@ func (h *Handler) handleUserLogin(w http.ResponseWriter, r *http.Request, _ http
 
 	ss, err := token.SignedString([]byte("mykey"))
 	if err != nil {
-		log.Printf("ERROR: error signing string %w", err)
+		log.Printf("ERROR: error signing string %v", err)
 		return
 	}
 

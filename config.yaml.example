@@ -28,8 +28,15 @@ databases:
     user: "feed_svc_user"
     password: "your_feed_password"
 
-
 goose:
   goose_driver: "postgres"
   goose_dbstring: "postgres://user:password@localhost:5432/test?sslmode=disable"
   goose_migration_dir: "./internal/data/migrations"
+
+# only temporary should change with service discovery
+api_gateway:
+  port: 3131
+user_service:
+  port: 3230
+chirp_service:
+  port: 3220
