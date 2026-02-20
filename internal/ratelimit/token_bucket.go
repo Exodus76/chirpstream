@@ -9,13 +9,13 @@ import (
 // refill the tokens
 // set a timing window for refill
 
-type TokenBucket struct {
+type tokenBucket struct {
 	currentTokens int
 	lastUpdatedAT time.Time
 }
 
-type rateLimiter struct {
-	visitor          map[any]*TokenBucket
+type RateLimiterConfig struct {
+	visitor          map[any]*tokenBucket
 	maxAllowedTokens int
 	refillRate       float64
 	mu               sync.Mutex
@@ -24,14 +24,14 @@ type rateLimiter struct {
 //something to set the config for what the request save type is
 
 // validating each request
-func validate(rq *rateLimiter, ip string) bool {
+func Validate(rq *RateLimiterConfig, ip string) bool {
 	rq.mu.Lock()
 	defer rq.mu.Unlock()
 
 	bucket, exists := rq.visitor[ip]
 	//new user if it does not exist so we can return without any other calculations
 	if !exists {
-		tb := &TokenBucket{
+		tb := &tokenBucket{
 			currentTokens: rq.maxAllowedTokens - 1,
 			lastUpdatedAT: time.Now(),
 		}
@@ -59,4 +59,14 @@ func validate(rq *rateLimiter, ip string) bool {
 	}
 
 	return false
+}
+
+// constructor func
+func NewRateLimterConfig(maxAllowedTokens int, refillRate float64) *RateLimiterConfig {
+	return &RateLimiterConfig{
+		visitor:          map[any]*tokenBucket{},
+		maxAllowedTokens: maxAllowedTokens,
+		refillRate:       refillRate,
+		mu:               sync.Mutex{},
+	}
 }
