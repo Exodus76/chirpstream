@@ -1,11 +1,19 @@
 #Makefile
 all: build
 
+build-apigateway:
+	go build -ldflags="-s -w" -o bin/chirpstream-api-gateway cmd/api-gateway/main.go
+
 build-user-service:
 	go build -ldflags="-s -w" -o bin/chirpstream-user cmd/user-service/main.go
 
 build-chirp-service:
 	go build -ldflags="-s -w" -o bin/chirpstream-chirps cmd/chirp-service/main.go
+
+build: build-apigateway build-user-service build-chirp-service
+
+run-apigateway: build-apigateway
+	./bin/chirpstream-api-gateway
 
 run-user: build-user-service
 	./bin/chirpstream-user
