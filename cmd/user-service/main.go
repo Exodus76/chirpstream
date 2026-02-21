@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/julienschmidt/httprouter"
 
@@ -59,18 +58,15 @@ func NewDBPool(conf config.DBConfig) (*pgxpool.Pool, error) {
 	config, err := pgxpool.ParseConfig(conf.DBConnstring())
 	if err != nil {
 		log.Fatalf("Failed to create initial pgxpool config: %v\n", err)
-		os.Exit(1)
 	}
 
 	pool, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
 		log.Fatalf("Unable to create connection pool: %v\n", err)
-		os.Exit(1)
 	}
 
 	if err := pool.Ping(context.Background()); err != nil {
 		log.Fatalf("Unable to ping database: %v\n", err)
-		os.Exit(1)
 	}
 
 	fmt.Println("Database Connection pool initialized successfully")

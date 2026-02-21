@@ -10,6 +10,7 @@ import (
 type Service interface {
 	CreateUser(ctx context.Context, name, email, password string) error
 	VerifyUser(ctx context.Context, email string, password string) (*User, error)
+	GetUserById(ctx context.Context, id int) (*User, error)
 	DeleteUser(ctx context.Context, id int) error
 }
 
@@ -54,6 +55,19 @@ func (s *service) VerifyUser(ctx context.Context, email string, password string)
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
 		return nil, fmt.Errorf("Error verifying password %w", err)
+	}
+
+	return user, nil
+}
+
+func (s *service) GetUserById(ctx context.Context, id int) (*User, error) {
+	user, err := s.repo.GetUserById(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("Error fetching user %w", err)
+	}
+
+	if user == nil {
+		return nil, fmt.Errorf("No user with this id %d, %w", id, err)
 	}
 
 	return user, nil

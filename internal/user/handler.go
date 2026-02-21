@@ -3,9 +3,9 @@ package user
 import (
 	"chirpstream/internal/auth"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -123,7 +123,16 @@ func (h *Handler) handleUserLogin(w http.ResponseWriter, r *http.Request, _ http
 }
 
 func (h *Handler) handleGetuser(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
-	userId := p.ByName("id")
+	ctx := r.Context()
+	userId, _ := strconv.Atoi(p.ByName("id"))
 
-	fmt.Fprintf(w, "handle get user %v", userId)
+	user, err := h.service.GetUserById(ctx, userId)
+	if err != nil {
+		log.Printf("ERROR: error getting user by id %v\n", err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(user)
 }

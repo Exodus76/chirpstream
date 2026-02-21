@@ -27,6 +27,10 @@ func (m *MockService) VerifyUser(ctx context.Context, email string, password str
 	return nil, nil
 }
 
+func (m *MockService) GetUserById(ctx context.Context, id int) (*User, error) {
+	return nil, nil
+}
+
 func (m *MockService) DeleteUser(ctx context.Context, id int) error {
 	return nil
 }

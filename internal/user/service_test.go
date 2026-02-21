@@ -20,6 +20,9 @@ func (m *MockRepo) CreateUser(ctx context.Context, user *User) error {
 func (m *MockRepo) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	return nil, nil
 }
+func (m *MockRepo) GetUserById(ctx context.Context, id int) (*User, error) {
+	return nil, nil
+}
 func (m *MockRepo) DeleteUser(ctx context.Context, id int) error {
 	return nil
 }

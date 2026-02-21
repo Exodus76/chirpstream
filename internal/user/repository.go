@@ -22,6 +22,7 @@ type User struct {
 type Repository interface {
 	CreateUser(ctx context.Context, user *User) error
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
+	GetUserById(ctx context.Context, id int) (*User, error)
 	DeleteUser(ctx context.Context, id int) error
 }
 
@@ -47,7 +48,7 @@ func (r *dbUserRepository) CreateUser(ctx context.Context, user *User) error {
 
 func (r *dbUserRepository) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	var user User
-	query := "SELECT id, name, email, password, active, created_at FROM Users WHERE email = $1"
+	query := "SELECT id, name, email, password, created_at FROM Users WHERE email = $1 AND active = 1"
 
 	err := r.db.QueryRow(ctx, query, email).Scan(
 		&user.ID,
@@ -63,6 +64,26 @@ func (r *dbUserRepository) GetUserByEmail(ctx context.Context, email string) (*U
 			return nil, fmt.Errorf("GetUserByEmail: no user with this email: %s %w", email, err)
 		}
 		return nil, fmt.Errorf("GetUserbyEmail: failed to execute query %w", err)
+	}
+
+	return &user, nil
+}
+
+func (r *dbUserRepository) GetUserById(ctx context.Context, id int) (*User, error) {
+	var user User
+	query := "SELECT id, name, email FROM Users WHERE id = $1 AND active = 1"
+
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&user.ID,
+		&user.Name,
+		&user.Email,
+	)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("GetUserById: no user with this id: %d %w", id, err)
+		}
+		return nil, fmt.Errorf("GetUserById: failed to execute query %w", err)
 	}
 
 	return &user, nil
