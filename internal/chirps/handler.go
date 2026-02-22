@@ -31,7 +31,8 @@ func NewHandler(service Service) *Handler {
 
 func (h *Handler) RegisterRoutes(router *httprouter.Router) {
 	router.POST("/api/chirp/create", auth.AuthMiddleware(h.handleCreateChirp))
-	router.POST("/api/chirp/update", auth.AuthMiddleware(h.handleUpdateChirp))
+	router.PUT("/api/chirp/update", auth.AuthMiddleware(h.handleUpdateChirpContent))
+	router.DELETE("/api/chirp/delete", auth.AuthMiddleware(h.handleDeleteChirp))
 
 	router.GET("/api/chirp/getChirpById/:chirpId", auth.AuthMiddleware(h.handleGetChirpById))
 	router.GET("/api/chirp/getChirpsByUserId/:userId", auth.AuthMiddleware(h.handleGetChirpsByUserId))
@@ -49,7 +50,7 @@ func (h *Handler) handleCreateChirp(w http.ResponseWriter, r *http.Request, _ ht
 		return
 	}
 
-	user, ok := r.Context().Value("user").(*auth.CustomClaim)
+	user, ok := ctx.Value("user").(*auth.CustomClaim)
 	if !ok {
 		log.Printf("Error: failed getting user from context\n")
 		response.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -66,22 +67,69 @@ func (h *Handler) handleCreateChirp(w http.ResponseWriter, r *http.Request, _ ht
 	response.JSON(w, http.StatusCreated, map[string]string{"message": "Chirp created successfully"})
 }
 
-func (h *Handler) handleUpdateChirp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (h *Handler) handleUpdateChirpContent(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var req UpdateChirpRequest
 
-	_ = r.Context()
+	ctx := r.Context()
 
+	defer r.Body.Close()
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	response.JSON(w, http.StatusCreated, map[string]string{"message": "Chirp updated successfully"})
+	user, ok := ctx.Value("user").(*auth.CustomClaim)
+	if !ok {
+		response.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	chirpId := r.URL.Query().Get("chirpId")
+	chirpUUID, err := gocql.ParseUUID(chirpId)
+	if err != nil {
+		log.Printf("Error: failed parsing chirpId parameter %v\n", err)
+		response.Error(w, "Something went wrong", http.StatusBadRequest)
+		return
+	}
+
+	err = h.service.UpdateChirp(ctx, int(user.UserID), chirpUUID, req.Content)
+	if err != nil {
+		log.Printf("Error: failed updating chirp %v\n", err)
+		response.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	response.JSON(w, http.StatusOK, map[string]string{"message": "Chirp updated successfully"})
+}
+
+func (h *Handler) handleDeleteChirp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	ctx := r.Context()
+
+	user, ok := ctx.Value("user").(*auth.CustomClaim)
+	if !ok {
+		log.Printf("Error: failed getting user from context\n")
+		response.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	chirpId := r.URL.Query().Get("chirpId")
+	chirpUUID, err := gocql.ParseUUID(chirpId)
+	if err != nil {
+		log.Printf("Error: failed parsing chirpId parameter %v\n", err)
+		response.Error(w, "Something went wrong", http.StatusBadRequest)
+		return
+	}
+	err = h.service.DeleteChirp(ctx, int(user.UserID), chirpUUID)
+	if err != nil {
+		log.Printf("Error: failed deleting chirp %v\n", err)
+		response.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+	response.JSON(w, http.StatusOK, map[string]string{"message": "Chirp deleted successfully"})
 }
 
 func (h *Handler) handleGetChirpById(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	var chirp *Chirp
-	var err error
 	ctx := r.Context()
 
 	param := p.ByName("chirpId")

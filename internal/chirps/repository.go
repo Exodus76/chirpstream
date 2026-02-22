@@ -41,6 +41,7 @@ func NewRepo(db *gocqlx.Session) Repository {
 	return &dbChirpRepository{db: db}
 }
 
+// TODO: need to add updatedAt
 type Chirp struct {
 	ChirpId   gocql.UUID `db:"chirp_id"`
 	UserId    int        `db:"user_id"`
