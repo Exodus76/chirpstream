@@ -149,21 +149,14 @@ func (h *Handler) handleGetChirpById(w http.ResponseWriter, r *http.Request, p h
 		return
 	}
 
-	chirp, err = h.service.GetChirpById(ctx, int(user.UserID), chirpId)
+	chirp, err = h.service.GetChirpById(ctx, user.UserID, chirpId)
 	if err != nil {
 		log.Printf("Error: cant get chirp %v\n", err)
 		response.Error(w, "No chirp found", http.StatusNotFound)
 		return
 	}
 
-	payload, err := json.Marshal(chirp)
-	if err != nil {
-		log.Printf("Error: marshalling JSON: %v\n", err)
-		response.Error(w, "Something went wrong", http.StatusInternalServerError)
-		return
-	}
-
-	response.JSON(w, http.StatusOK, payload)
+	response.JSON(w, http.StatusOK, chirp)
 }
 
 func (h *Handler) handleGetChirpsByUserId(w http.ResponseWriter, r *http.Request, p httprouter.Params) {

@@ -1,15 +1,18 @@
 package main
 
 import (
+	"chirpstream/internal/pb"
 	"chirpstream/internal/user"
 	"chirpstream/pkg/config"
 	"context"
 	"database/sql"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
+	"google.golang.org/grpc"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -39,6 +42,24 @@ func main() {
 	repo := user.NewRepo(pool)
 	service := user.NewService(repo)
 	handler := user.NewHandler(service)
+
+	// --- GRPC stuff ---
+	go func() {
+		lis, err := net.Listen("tcp", "localhost:50051")
+		if err != nil {
+			log.Fatalf("Error starting grpc server %v\n", err)
+		}
+
+		grpcServer := grpc.NewServer()
+
+		userGrpcServer := user.NewGRPCServer(service)
+		pb.RegisterUserServiceServer(grpcServer, userGrpcServer)
+
+		log.Println("User Service gRPC listening on :50051")
+		if err := grpcServer.Serve(lis); err != nil {
+			log.Fatalf("failed to serve gRPC: %v", err)
+		}
+	}()
 
 	mux := httprouter.New()
 	mux.GET("/", func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {

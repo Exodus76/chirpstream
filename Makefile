@@ -52,6 +52,10 @@ migrate-down:
 migrate-create:
 	goose -dir ./internal/data/migrations create $(name) sql
 
+#Proto generation
+generate-proto:
+	protoc --proto_path=proto --go_out=internal/pb --go_opt=paths=source_relative --go-grpc_out=internal/pb --go-grpc_opt=paths=source_relative user.proto
+
 
 # Help command to list all available targets
 # @echo "  test          - Run tests"

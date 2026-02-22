@@ -82,7 +82,7 @@ func (h *Handler) handleUserLogin(w http.ResponseWriter, r *http.Request, _ http
 	user, err := h.service.VerifyUser(ctx, req.Email, req.Password)
 	if err != nil {
 		log.Printf("ERROR: error verifying %v\n", err)
-		response.Error(w, "Something went wrong", http.StatusUnauthorized)
+		response.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
@@ -92,7 +92,7 @@ func (h *Handler) handleUserLogin(w http.ResponseWriter, r *http.Request, _ http
 	}
 
 	claims := &auth.CustomClaim{
-		UserID: user.ID,
+		UserID: int(user.ID),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
 			Issuer:    "Chirpstream",

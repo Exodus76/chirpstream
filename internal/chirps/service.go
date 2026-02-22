@@ -16,15 +16,15 @@ type Service interface {
 }
 
 type service struct {
-	repo Repository
+	repo       Repository
+	userClient *UserClient
 }
 
-func NewService(repo Repository) *service {
-	return &service{repo: repo}
+func NewService(repo Repository, userClient *UserClient) *service {
+	return &service{repo: repo, userClient: userClient}
 }
 
 func (s *service) CreateChirp(ctx context.Context, content string, userId int) error {
-
 	//TODO: check if user exist before creating new chirp
 	err := s.repo.CreateChirp(ctx, content, userId)
 	if err != nil {
@@ -35,20 +35,23 @@ func (s *service) CreateChirp(ctx context.Context, content string, userId int) e
 }
 
 func (s *service) GetChirpById(ctx context.Context, userId int, chirpId gocql.UUID) (*Chirp, error) {
-	var chirp *Chirp
+	user, err := s.userClient.GetUser(ctx, userId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user with id: %d %w", userId, err)
+	}
 
 	chirp, err := s.repo.GetChirpById(ctx, userId, chirpId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get chirp with id: %s %w", chirpId, err)
 	}
 
+	chirp.Name = user.Name
+	chirp.Username = user.Username
+
 	return chirp, nil
 }
 
 func (s *service) GetChirpsByUserId(ctx context.Context, userId int, pageState []byte, limit int) ([]Chirp, []byte, error) {
-	var chirp []Chirp
-	var nextPageState []byte
-
 	chirp, nextPageState, err := s.repo.GetChirpsByUserId(ctx, userId, pageState, limit)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed getting chirps for user id: %d %w", userId, err)

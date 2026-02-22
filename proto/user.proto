@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option go_package = "chirpstream/internal/pb";
+
+// The user service definition.
+service UserService {
+    // Retrieves a user by their ID.
+    rpc GetUserById (GetUserByIdRequest) returns (GetUserByIdResponse);
+}
+
+message GetUserByIdRequest {
+    int32 id = 1;
+}
+
+message GetUserByIdResponse {
+    int32 id = 1;
+    string name = 2;
+    string username = 3;
+}

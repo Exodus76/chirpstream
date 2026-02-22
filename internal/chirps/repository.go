@@ -45,6 +45,8 @@ func NewRepo(db *gocqlx.Session) Repository {
 type Chirp struct {
 	ChirpId   gocql.UUID `db:"chirp_id"`
 	UserId    int        `db:"user_id"`
+	Name      string     `db:"name"`
+	Username  string     `db:"username"`
 	Content   string     `db:"content"`
 	Likes     int        `db:"likes"`
 	Retweets  int        `db:"retweets"`

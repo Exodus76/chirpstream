@@ -57,7 +57,7 @@ func TestRepo_handleCreateUser(t *testing.T) {
 	newUser := &User{
 		Name:       "Test",
 		Email:      "test@test.com",
-		User_name:  "mridul",
+		Username:   "mridul",
 		Password:   "password",
 		Active:     false,
 		Created_at: time.Time{},

@@ -36,9 +36,15 @@ func main() {
 		log.Fatalf("Failed to run database migration: %v\n", err)
 	}
 
+	// --- GRPC stuff ---
+	userGrpcClient, err := chirps.NewUserClient("localhost:50051")
+	if err != nil {
+		log.Fatalf("Failed to create gRPC client: %v\n", err)
+	}
+
 	// --- repository stuff ---
 	repo := chirps.NewRepo(&dbSession)
-	service := chirps.NewService(repo)
+	service := chirps.NewService(repo, userGrpcClient)
 	handler := chirps.NewHandler(service)
 
 	mux := httprouter.New()
@@ -55,6 +61,7 @@ func main() {
 	}
 }
 
+// --- unused code for postgres, keeping it here for reference ---
 func NewDBPool(conf config.DBConfig) (*pgxpool.Pool, error) {
 	config, err := pgxpool.ParseConfig(conf.DBConnstring())
 	if err != nil {

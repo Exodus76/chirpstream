@@ -13,7 +13,7 @@ type User struct {
 	ID         int64     `json:"id"`
 	Name       string    `json:"name"`
 	Email      string    `json:"email"`
-	User_name  string    `json:"username.omitempty"`
+	Username   string    `json:"username"`
 	Password   string    `json:"-"`
 	Active     bool      `json:"active"`
 	Created_at time.Time `json:"created_at"`
@@ -48,7 +48,7 @@ func (r *dbUserRepository) CreateUser(ctx context.Context, user *User) error {
 
 func (r *dbUserRepository) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	var user User
-	query := "SELECT id, name, email, password, created_at FROM Users WHERE email = $1 AND active = TRUE"
+	query := "SELECT id, name, email, password, created_at FROM Users WHERE email=$1 AND active=TRUE"
 
 	err := r.db.QueryRow(ctx, query, email).Scan(
 		&user.ID,
@@ -70,11 +70,12 @@ func (r *dbUserRepository) GetUserByEmail(ctx context.Context, email string) (*U
 
 func (r *dbUserRepository) GetUserById(ctx context.Context, id int) (*User, error) {
 	var user User
-	query := "SELECT id, name, email FROM Users WHERE id = $1 AND active = 1"
+	query := "SELECT id, name, username, email FROM Users WHERE id=$1 AND active=TRUE"
 
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&user.ID,
 		&user.Name,
+		&user.Username,
 		&user.Email,
 	)
 
