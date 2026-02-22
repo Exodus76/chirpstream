@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"chirpstream/pkg/response"
 	"context"
 	"log"
 	"net/http"
@@ -16,8 +17,8 @@ func AuthMiddleware(next httprouter.Handle) httprouter.Handle {
 		authHeader := strings.Split(r.Header.Get("Authorization"), "Bearer ")
 		if len(authHeader) != 2 {
 			log.Printf("Malformed token")
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Malformed Token"))
+			response.Error(w, "Malformed token", http.StatusUnauthorized)
+			return
 		}
 
 		jwtToken := authHeader[1]
@@ -31,8 +32,8 @@ func AuthMiddleware(next httprouter.Handle) httprouter.Handle {
 			next(w, r.WithContext(ctx), p)
 		} else {
 			log.Printf("ERROR: Unauthorized access %v\n", err)
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("Unauthorized"))
+			response.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
 		}
 
 	}

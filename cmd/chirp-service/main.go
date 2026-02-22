@@ -2,6 +2,7 @@ package main
 
 import (
 	"chirpstream/internal/chirps"
+	"chirpstream/internal/database"
 	"chirpstream/pkg/config"
 	"context"
 	"database/sql"
@@ -22,21 +23,21 @@ func main() {
 		log.Fatalf("Cant parse config file %v\n", err)
 	}
 
-	pool, err := NewDBPool(cfg.Databases.Chirps)
+	//changing chirp db to scylla
+	dbSession, err := database.InitScyllaDb(cfg.Scylladb.Host, cfg.Scylladb.Username, cfg.Scylladb.Password, cfg.Scylladb.Keyspace)
 	if err != nil {
-		log.Fatalf("Failed to create database pool: %v\n", err)
+		log.Fatalf("Failed to initialize ScyllaDB: %v\n", err)
 	}
+	defer dbSession.Close()
 
-	defer CloseDB(pool)
-
-	// --- Migration stuff ---
-	err = gooseMigrations(pool)
+	//run database migration
+	err = database.Migrate(&dbSession, cfg.Scylladb.Keyspace)
 	if err != nil {
-		log.Fatalf("Failed to run migration: %v\n", err)
+		log.Fatalf("Failed to run database migration: %v\n", err)
 	}
 
 	// --- repository stuff ---
-	repo := chirps.NewRepo(pool)
+	repo := chirps.NewRepo(&dbSession)
 	service := chirps.NewService(repo)
 	handler := chirps.NewHandler(service)
 

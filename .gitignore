@@ -31,3 +31,11 @@ config.yaml
 # Editor/IDE
 # .idea/
 # .vscode/
+
+notes.md
+project_structure.md
+internal/chirps/repository.go.backup
+internal/database/schema.cql
+
+# bin
+bin/

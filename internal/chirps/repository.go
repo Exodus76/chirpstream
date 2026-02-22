@@ -5,166 +5,146 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/gocql/gocql"
+	"github.com/scylladb/gocqlx/v3"
+	"github.com/scylladb/gocqlx/v3/qb"
+	"github.com/scylladb/gocqlx/v3/table"
 )
 
-type ChirpWithLikes struct {
-	ID         int       `json:"id"`
-	Content    string    `json:"content"`
-	User_id    int       `json:"user_id"`
-	Created_at time.Time `json:"created_at"`
-	Like_count int64     `json:"like_count"`
-}
+// Define table metadata once
+var chirpTable = table.New(table.Metadata{
+	Name:    "chirps_by_user",
+	Columns: []string{"user_id", "chirp_id", "content", "created_at"},
+	PartKey: []string{"user_id"},
+	SortKey: []string{"chirp_id"},
+})
 
-type Chirps struct {
-	ID         int       `json:"id"`
-	Content    string    `json:"content"`
-	User_id    int       `json:"user_id"`
-	Created_at time.Time `json:"created_at"`
-}
+var statsTable = table.New(table.Metadata{
+	Name:    "chirp_stats",
+	Columns: []string{"chirp_id", "likes", "retweets", "replies"},
+	PartKey: []string{"chirp_id"},
+})
 
 type Repository interface {
-	CreateChirp(ctx context.Context, content string, user_id int) error
-	GetChirpById(ctx context.Context, id int) (*Chirps, error)
-	GetChirpWithLikesById(ctx context.Context, id int) (*ChirpWithLikes, error)
-	GetChirpsByUserId(ctx context.Context, user_id int) ([]Chirps, error)
-	UpdateChirp(ctx context.Context, id int, content string) error
-	DeleteChirp(ctx context.Context, id int) error
+	CreateChirp(ctx context.Context, content string, userId int) error
+	GetChirpById(ctx context.Context, userId int, chirpId gocql.UUID) (*Chirp, error)
+	GetChirpsByUserId(ctx context.Context, userId int, pageState []byte, limit int) ([]Chirp, []byte, error)
+	UpdateChirp(ctx context.Context, userId int, chirpId gocql.UUID, content string) error
+	DeleteChirp(ctx context.Context, userId int, chirpId gocql.UUID) error
 }
 
 type dbChirpRepository struct {
-	db *pgxpool.Pool
+	db *gocqlx.Session
 }
 
-func NewRepo(db *pgxpool.Pool) Repository {
+func NewRepo(db *gocqlx.Session) Repository {
 	return &dbChirpRepository{db: db}
 }
 
-func (dc *dbChirpRepository) CreateChirp(ctx context.Context, content string, user_id int) error {
-
-	query := "INSERT INTO Chirps (content, user_id) VALUES ($1, $2)"
-
-	_, err := dc.db.Exec(ctx, query, content, user_id)
-	if err != nil {
-		return fmt.Errorf("CreateChirp: could not insert new chirp: %w", err)
-	}
-
-	return nil
+type Chirp struct {
+	ChirpId   gocql.UUID `db:"chirp_id"`
+	UserId    int        `db:"user_id"`
+	Content   string     `db:"content"`
+	Likes     int        `db:"likes"`
+	Retweets  int        `db:"retweets"`
+	Replies   int        `db:"replies"`
+	CreatedAt time.Time  `db:"created_at"`
 }
 
-func (dc *dbChirpRepository) GetChirpWithLikesById(ctx context.Context, id int) (*ChirpWithLikes, error) {
-	var chirp ChirpWithLikes
-
-	query := "SELECT c.id, c.content, c.user_id, c.created_at, COUNT(cl.chirp_id) AS like_count FROM chirps c LEFT JOIN chirp_likes cl ON c.id=cl.chirp_id WHERE c.id=$1::int GROUP BY c.id"
-
-	err := dc.db.QueryRow(ctx, query, id).Scan(
-		&chirp.ID,
-		&chirp.Content,
-		&chirp.User_id,
-		&chirp.Created_at,
-		&chirp.Like_count,
-	)
-
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("GetChirpWithLikesById: chirp with id %d not found", err)
-		}
-
-		return nil, fmt.Errorf("GetChirpWithLikesById: Error executing query %w", err)
+func (dc *dbChirpRepository) CreateChirp(ctx context.Context, content string, userId int) error {
+	chirp := Chirp{
+		UserId:    userId,
+		ChirpId:   gocql.TimeUUID(),
+		Content:   content,
+		CreatedAt: time.Now(),
 	}
 
-	return &chirp, nil
+	stmt, names := chirpTable.Insert()
 
+	// BindStruct maps the Go struct fields directly to the query
+	return dc.db.Query(stmt, names).BindStruct(chirp).Exec()
 }
 
-func (dc *dbChirpRepository) GetChirpById(ctx context.Context, id int) (*Chirps, error) {
-	var chirp Chirps
-	query := "SELECT * FROM Chirps WHERE id=$1"
+func (dc *dbChirpRepository) GetChirpById(ctx context.Context, userId int, chirpId gocql.UUID) (*Chirp, error) {
+	var chirp Chirp
 
-	err := dc.db.QueryRow(ctx, query, id).Scan(
-		&chirp.ID,
-		&chirp.Content,
-		&chirp.User_id,
-		&chirp.Created_at,
-	)
+	stmt, names := chirpTable.Get("user_id", "chirp_id")
+	err := dc.db.Query(stmt, names).BindMap(map[string]interface{}{
+		"user_id":  userId,
+		"chirp_id": chirpId,
+	}).Get(&chirp)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("GetChirpById: chirp with id %d not found", err)
+		if err == gocql.ErrNotFound {
+			return nil, fmt.Errorf("GetChirpById: chirp with id %s not found", chirpId)
 		}
-
 		return nil, fmt.Errorf("GetChirpById: cant execute query %w", err)
 	}
 
+	stmtStats, namesStats := statsTable.Get("chirp_id")
+	err = dc.db.Query(stmtStats, namesStats).BindMap(map[string]interface{}{
+		"chirp_id": chirpId,
+	}).Get(&chirp)
+
+	if err != nil && err != gocql.ErrNotFound {
+		return nil, fmt.Errorf("GetChirpById: cant execute stats query %w", err)
+	}
+
 	return &chirp, nil
-
 }
 
-func (dc *dbChirpRepository) GetChirpsByUserId(ctx context.Context, user_id int) ([]Chirps, error) {
+func (dc *dbChirpRepository) GetChirpsByUserId(ctx context.Context, userId int, pageState []byte, limit int) ([]Chirp, []byte, error) {
+	var chirps []Chirp
 
-	var chirps []Chirps
-	query := "SELECT * FROM Chirps WHERE user_id=$1"
+	// stmt, names := chirpTable.Get("user_id")
+	//.Get is for single row, we need to use Select for multiple rows
+	stmt, names := qb.Select(chirpTable.Name()).Where(qb.Eq("user_id")).ToCql()
+	iter := dc.db.Query(stmt, names).BindMap(map[string]interface{}{
+		"user_id": userId,
+	}).PageSize(limit).PageState(pageState).Iter()
 
-	rows, err := dc.db.Query(ctx, query)
-	if err != nil {
-		return nil, fmt.Errorf("GetChirpsByUserId: cant execute query %w", err)
+	err := iter.Select(&chirps)
+	nextPageState := iter.PageState()
+
+	if closeErr := iter.Close(); closeErr != nil {
+		return nil, nil, fmt.Errorf("cant execute query: %w", closeErr)
 	}
 
-	chirps, err = pgx.CollectRows(rows, pgx.RowToStructByName[Chirps])
 	if err != nil {
-		return nil, fmt.Errorf("GetChirpByUserId: cant getting rows %w", err)
-	}
-
-	return chirps, nil
-
-}
-
-func (dc *dbChirpRepository) UpdateChirp(ctx context.Context, id int, content string) error {
-	var existingChirp Chirps
-
-	selectQuery := "SELECT id, content FROM Chirps WHERE id=$1"
-
-	err := dc.db.QueryRow(ctx, selectQuery, id, content).Scan(
-		&existingChirp.ID,
-		&existingChirp.Content,
-		&existingChirp.User_id,
-		&existingChirp.Created_at,
-	)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return fmt.Errorf("UpdateChirp: chirp with id %d not found", id)
+		if err == gocql.ErrNotFound {
+			return nil, nil, fmt.Errorf("GetChirpsByUserId: no chirps found for user id %d", userId)
 		}
-		return fmt.Errorf("UpdateChirp: cant execute select query %w", err)
+		return nil, nil, fmt.Errorf("GetChirpsByUserId: cant execute query %w", err)
 	}
 
-	updateQuery := "UPDATE Chirps SET content=$1 WHERE id=$2"
+	return chirps, nextPageState, nil
+}
 
-	commandTag, err := dc.db.Exec(ctx, updateQuery, content, id)
+func (dc *dbChirpRepository) UpdateChirp(ctx context.Context, userId int, chirpId gocql.UUID, content string) error {
+	stmt, names := chirpTable.Update("content")
+
+	err := dc.db.Query(stmt, names).BindMap(map[string]interface{}{
+		"content":  content,
+		"user_id":  userId,
+		"chirp_id": chirpId,
+	}).Exec()
+
 	if err != nil {
-		return fmt.Errorf("UpdateChirp: cant execute update query")
+		return fmt.Errorf("UpdateChirp: cant execute update query %w", err)
 	}
-
-	if commandTag.RowsAffected() != 1 {
-		return fmt.Errorf("UpdateChirp: chirp with id %d not found", id)
-	}
-
 	return nil
 }
 
-func (dc *dbChirpRepository) DeleteChirp(ctx context.Context, id int) error {
-	query := "DELETE FROM Chirps WHERE id=$1"
+func (dc *dbChirpRepository) DeleteChirp(ctx context.Context, userId int, chirpId gocql.UUID) error {
+	stmt, names := chirpTable.Delete()
 
-	commandTag, err := dc.db.Exec(ctx, query)
+	err := dc.db.Query(stmt, names).BindMap(map[string]interface{}{
+		"user_id":  userId,
+		"chirp_id": chirpId,
+	}).Exec()
+
 	if err != nil {
 		return fmt.Errorf("DeleteChirp: could not execute delete query %w", err)
 	}
-
-	if commandTag.RowsAffected() != 1 {
-		return fmt.Errorf("DeleteChirp: could not delete post: %w", err)
-	}
-
 	return nil
 }
-
-// func (dc *dbChirpRepository) EditChirp(ctx context.Context, chirp *Chirps) {}

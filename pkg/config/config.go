@@ -21,15 +21,23 @@ type DBConfig struct {
 	Keyspace string `yaml:"keyspace"` // Used for Scylla/Cassandra
 }
 
+type scylladbConfig struct {
+	Keyspace string   `yaml:"keyspace"`
+	Host     []string `yaml:"host"`
+	Username string   `yaml:"username"`
+	Password string   `yaml:"password"`
+}
+
 type Config struct {
 	Databases struct {
 		Users      DBConfig `yaml:"users"`
 		Users_Test DBConfig `yaml:"users_test"`
 		Chirps     DBConfig `yaml:"chirps"`
 	} `yaml:"databases"`
-	API_Gateway   ServiceConfig `yaml:"api_gateway"`
-	User_Service  ServiceConfig `yaml:"user_service"`
-	Chirp_Service ServiceConfig `yaml:"chirp_service"`
+	Scylladb      scylladbConfig `yaml:"scylladb"`
+	API_Gateway   ServiceConfig  `yaml:"api_gateway"`
+	User_Service  ServiceConfig  `yaml:"user_service"`
+	Chirp_Service ServiceConfig  `yaml:"chirp_service"`
 }
 
 func Init(configPath string) (config Config, err error) {

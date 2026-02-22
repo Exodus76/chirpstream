@@ -3,6 +3,7 @@ package main
 import (
 	rateLimiter "chirpstream/internal/ratelimit"
 	"chirpstream/pkg/config"
+	"chirpstream/pkg/response"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -14,7 +15,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := r.Header.Get("Authorization")
 		if token == "" {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			response.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
@@ -31,10 +32,9 @@ func rateLimitMiddleware(rl *rateLimiter.RateLimiterConfig) func(http.Handler) h
 			isAllowed := rateLimiter.Validate(rl, r.RemoteAddr)
 
 			if !isAllowed {
-				http.Error(w, "Too Many Requests", http.StatusTooManyRequests)
+				response.Error(w, "Too Many Requests", http.StatusTooManyRequests)
 				return
 			}
-
 			next.ServeHTTP(w, r)
 		})
 	}
@@ -48,9 +48,16 @@ func main() {
 
 	rlc := rateLimiter.NewRateLimterConfig(10, 5)
 
-	userURL, _ := url.Parse(cfg.User_Service.Addr)
+	userURL, err := url.Parse(cfg.User_Service.Addr)
+	if err != nil || userURL.Host == "" {
+		log.Fatalf("Invalid user service address: %v", cfg.User_Service.Addr)
+	}
 	userProxy := httputil.NewSingleHostReverseProxy(userURL)
-	chirpURL, _ := url.Parse(cfg.Chirp_Service.Addr)
+
+	chirpURL, err := url.Parse(cfg.Chirp_Service.Addr)
+	if err != nil || chirpURL.Host == "" {
+		log.Fatalf("Invalid chirp service address: %v", cfg.Chirp_Service.Addr)
+	}
 	chirpProxy := httputil.NewSingleHostReverseProxy(chirpURL)
 
 	// Set timeouts for the reverse proxies to prevent hanging requests
@@ -64,12 +71,15 @@ func main() {
 	mux.Handle("POST /api/user/register", http.StripPrefix("", userProxyWithTimeout))
 
 	mux.Handle("/api/users/", AuthMiddleware(userProxyWithTimeout))
-	mux.Handle("/api/chirps/", AuthMiddleware(chirpProxyWithTimeout))
+	mux.Handle("/api/chirp/", chirpProxyWithTimeout)
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		response.Error(w, "Not Found", http.StatusNotFound)
+	}))
 
-	http.Handle("/", rateLimitMiddleware(rlc)(mux))
+	handler := rateLimitMiddleware(rlc)(mux)
 
 	log.Println("API Gateway started on address", cfg.API_Gateway.Addr)
-	err = http.ListenAndServe(cfg.API_Gateway.Addr, nil)
+	err = http.ListenAndServe(cfg.API_Gateway.Addr, handler)
 	if err != nil {
 		log.Fatalf("Error starting API Gateway: %v\n", err)
 	}

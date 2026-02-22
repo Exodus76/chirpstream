@@ -3,15 +3,16 @@ package chirps
 import (
 	"context"
 	"fmt"
+
+	"github.com/gocql/gocql"
 )
 
 type Service interface {
-	CreateChirp(ctx context.Context, content string, user_id int) error
-	GetChirpById(ctx context.Context, id int) (*Chirps, error)
-	GetChirpWithLikesById(ctx context.Context, id int) (*ChirpWithLikes, error)
-	GetChirpsByUserId(ctx context.Context, user_id int) ([]Chirps, error)
-	UpdateChirp(ctx context.Context, id int, content string) error
-	DeleteChirp(ctx context.Context, id int) error
+	CreateChirp(ctx context.Context, content string, userId int) error
+	GetChirpById(ctx context.Context, userId int, chirpId gocql.UUID) (*Chirp, error)
+	GetChirpsByUserId(ctx context.Context, userId int, pageState []byte, limit int) ([]Chirp, []byte, error)
+	UpdateChirp(ctx context.Context, chirpId gocql.UUID, content string) error
+	DeleteChirp(ctx context.Context, chirpId gocql.UUID) error
 }
 
 type service struct {
@@ -22,10 +23,10 @@ func NewService(repo Repository) *service {
 	return &service{repo: repo}
 }
 
-func (s *service) CreateChirp(ctx context.Context, content string, user_id int) error {
+func (s *service) CreateChirp(ctx context.Context, content string, userId int) error {
 
 	//TODO: check if user exist before creating new chirp
-	err := s.repo.CreateChirp(ctx, content, user_id)
+	err := s.repo.CreateChirp(ctx, content, userId)
 	if err != nil {
 		return fmt.Errorf("failed to create chirp %w", err)
 	}
@@ -33,72 +34,61 @@ func (s *service) CreateChirp(ctx context.Context, content string, user_id int) 
 	return nil
 }
 
-func (s *service) GetChirpById(ctx context.Context, id int) (*Chirps, error) {
-	var chirp *Chirps
+func (s *service) GetChirpById(ctx context.Context, userId int, chirpId gocql.UUID) (*Chirp, error) {
+	var chirp *Chirp
 	var err error
 
-	chirp, err = s.repo.GetChirpById(ctx, id)
+	chirp, err = s.repo.GetChirpById(ctx, userId, chirpId)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get chirp with id: %d %w", id, err)
+		return nil, fmt.Errorf("failed to get chirp with id: %s %w", chirpId, err)
 	}
 
 	return chirp, nil
 }
 
-func (s *service) GetChirpWithLikesById(ctx context.Context, id int) (*ChirpWithLikes, error) {
-	var chirp *ChirpWithLikes
+func (s *service) GetChirpsByUserId(ctx context.Context, userId int, pageState []byte, limit int) ([]Chirp, []byte, error) {
+	var chirp []Chirp
+	var nextPageState []byte
 	var err error
 
-	chirp, err = s.repo.GetChirpWithLikesById(ctx, id)
+	chirp, nextPageState, err = s.repo.GetChirpsByUserId(ctx, userId, pageState, limit)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get chirp with likes for id: %d %w", id, err)
+		return nil, nil, fmt.Errorf("failed getting chirps for user id: %d %w", userId, err)
 	}
 
-	return chirp, nil
+	return chirp, nextPageState, nil
 }
 
-func (s *service) GetChirpsByUserId(ctx context.Context, user_id int) ([]Chirps, error) {
-	var chirp []Chirps
+func (s *service) UpdateChirp(ctx context.Context, chirpId gocql.UUID, content string) error {
+	// var chirp *Chirps
+	// var err error
 
-	chirp, err := s.repo.GetChirpsByUserId(ctx, user_id)
-	if err != nil {
-		//TODO: check this again
-		return nil, fmt.Errorf("failed getting chirps for user id: %d %w", user_id, err)
-	}
+	// chirp, err = s.repo.GetChirpById(ctx, id)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to get chirp with id: %d %w", id, err)
+	// }
 
-	return chirp, nil
-}
-
-func (s *service) UpdateChirp(ctx context.Context, id int, content string) error {
-	var chirp *Chirps
-	var err error
-
-	chirp, err = s.repo.GetChirpById(ctx, id)
-	if err != nil {
-		return fmt.Errorf("failed to get chirp with id: %d %w", id, err)
-	}
-
-	err = s.repo.UpdateChirp(ctx, chirp.ID, content)
-	if err != nil {
-		return fmt.Errorf("failed to update chirp with id: %d %w", id, err)
-	}
+	// err = s.repo.UpdateChirp(ctx, chirp.ID, content)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to update chirp with id: %d %w", id, err)
+	// }
 
 	return nil
 }
 
-func (s *service) DeleteChirp(ctx context.Context, id int) error {
-	var chirp *Chirps
-	var err error
+func (s *service) DeleteChirp(ctx context.Context, chirpId gocql.UUID) error {
+	// var chirp *Chirps
+	// var err error
 
-	chirp, err = s.repo.GetChirpById(ctx, id)
-	if err != nil {
-		return fmt.Errorf("failed to update chirp with id: %d %w", id, err)
-	}
+	// chirp, err = s.repo.GetChirpById(ctx, id)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to update chirp with id: %d %w", id, err)
+	// }
 
-	err = s.repo.DeleteChirp(ctx, chirp.ID)
-	if err != nil {
-		return fmt.Errorf("Could not delete chirp with id: %d %w", id, err)
-	}
+	// err = s.repo.DeleteChirp(ctx, chirp.ID)
+	// if err != nil {
+	// 	return fmt.Errorf("Could not delete chirp with id: %d %w", id, err)
+	// }
 
 	return nil
 }

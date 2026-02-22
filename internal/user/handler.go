@@ -2,6 +2,7 @@ package user
 
 import (
 	"chirpstream/internal/auth"
+	"chirpstream/pkg/response"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -50,7 +51,7 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request, _ htt
 	ctx := r.Context()
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		response.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
@@ -59,15 +60,11 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request, _ htt
 	err := h.service.CreateUser(ctx, req.Name, req.Email, req.Password)
 	if err != nil {
 		log.Printf("ERROR: registering new user %v \n", err)
-		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		response.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-
-	response := map[string]string{"message": "User created successfully"}
-	json.NewEncoder(w).Encode(response)
+	response.JSON(w, http.StatusCreated, map[string]string{"message": "User created successfully"})
 }
 
 func (h *Handler) handleUserLogin(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -75,23 +72,22 @@ func (h *Handler) handleUserLogin(w http.ResponseWriter, r *http.Request, _ http
 
 	ctx := r.Context()
 
+	defer r.Body.Close()
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("ERROR: error parsing request %v", err)
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		response.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-
-	defer r.Body.Close()
 
 	user, err := h.service.VerifyUser(ctx, req.Email, req.Password)
 	if err != nil {
 		log.Printf("ERROR: error verifying %v\n", err)
-		http.Error(w, "Something went wrong", http.StatusUnauthorized)
+		response.Error(w, "Something went wrong", http.StatusUnauthorized)
 		return
 	}
 
 	if user == nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		response.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
@@ -111,15 +107,12 @@ func (h *Handler) handleUserLogin(w http.ResponseWriter, r *http.Request, _ http
 		return
 	}
 
-	response := LoginResponse{
-		ss,
-		user.ID,
+	payload := &LoginResponse{
+		Token:  ss,
+		UserID: user.ID,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Authorization", ss)
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	response.JSON(w, http.StatusOK, payload)
 }
 
 func (h *Handler) handleGetuser(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
@@ -129,10 +122,8 @@ func (h *Handler) handleGetuser(w http.ResponseWriter, r *http.Request, p httpro
 	user, err := h.service.GetUserById(ctx, userId)
 	if err != nil {
 		log.Printf("ERROR: error getting user by id %v\n", err)
-		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		response.Error(w, "Something went wrong", http.StatusInternalServerError)
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(user)
+	response.JSON(w, http.StatusOK, user)
 }

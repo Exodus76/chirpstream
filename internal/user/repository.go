@@ -48,14 +48,13 @@ func (r *dbUserRepository) CreateUser(ctx context.Context, user *User) error {
 
 func (r *dbUserRepository) GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	var user User
-	query := "SELECT id, name, email, password, created_at FROM Users WHERE email = $1 AND active = 1"
+	query := "SELECT id, name, email, password, created_at FROM Users WHERE email = $1 AND active = TRUE"
 
 	err := r.db.QueryRow(ctx, query, email).Scan(
 		&user.ID,
 		&user.Name,
 		&user.Email,
 		&user.Password,
-		&user.Active,
 		&user.Created_at,
 	)
 

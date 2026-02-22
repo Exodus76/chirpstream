@@ -23,7 +23,7 @@ run-chirp: build-chirp-service
 
 SHELL := /bin/bash
 
-test:
+test-user-service:
 	@docker compose up -d
 	@trap 'echo "removing db"; docker compose -f docker-compose.yml down' EXIT
 	@go test -v ./internal/user
