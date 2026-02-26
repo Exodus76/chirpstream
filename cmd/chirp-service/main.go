@@ -55,9 +55,9 @@ func main() {
 	handler.RegisterRoutes(mux)
 
 	log.Println("Server started on port :3220")
-	errr := http.ListenAndServe("localhost:3220", mux)
-	if errr != nil {
-		log.Fatalf("Error starting server %v\n", errr)
+	err = http.ListenAndServe("localhost:3220", mux)
+	if err != nil {
+		log.Fatalf("Error starting server %v\n", err)
 	}
 }
 

@@ -65,7 +65,7 @@ func (dc *dbChirpRepository) CreateChirp(ctx context.Context, content string, us
 	stmt, names := chirpTable.Insert()
 
 	// BindStruct maps the Go struct fields directly to the query
-	return dc.db.Query(stmt, names).BindStruct(chirp).Exec()
+	return dc.db.Query(stmt, names).BindStruct(chirp).WithContext(ctx).Exec()
 }
 
 func (dc *dbChirpRepository) GetChirpById(ctx context.Context, userId int, chirpId gocql.UUID) (*Chirp, error) {
@@ -75,7 +75,7 @@ func (dc *dbChirpRepository) GetChirpById(ctx context.Context, userId int, chirp
 	err := dc.db.Query(stmt, names).BindMap(map[string]interface{}{
 		"user_id":  userId,
 		"chirp_id": chirpId,
-	}).Get(&chirp)
+	}).WithContext(ctx).Get(&chirp)
 
 	if err != nil {
 		if err == gocql.ErrNotFound {
@@ -87,7 +87,7 @@ func (dc *dbChirpRepository) GetChirpById(ctx context.Context, userId int, chirp
 	stmtStats, namesStats := statsTable.Get("chirp_id")
 	err = dc.db.Query(stmtStats, namesStats).BindMap(map[string]interface{}{
 		"chirp_id": chirpId,
-	}).Get(&chirp)
+	}).WithContext(ctx).Get(&chirp)
 
 	if err != nil && err != gocql.ErrNotFound {
 		return nil, fmt.Errorf("GetChirpById: cant execute stats query %w", err)
@@ -104,7 +104,7 @@ func (dc *dbChirpRepository) GetChirpsByUserId(ctx context.Context, userId int, 
 	stmt, names := qb.Select(chirpTable.Name()).Where(qb.Eq("user_id")).ToCql()
 	iter := dc.db.Query(stmt, names).BindMap(map[string]interface{}{
 		"user_id": userId,
-	}).PageSize(limit).PageState(pageState).Iter()
+	}).PageSize(limit).PageState(pageState).WithContext(ctx).Iter()
 
 	err := iter.Select(&chirps)
 	nextPageState := iter.PageState()
@@ -130,7 +130,7 @@ func (dc *dbChirpRepository) UpdateChirp(ctx context.Context, userId int, chirpI
 		"content":  content,
 		"user_id":  userId,
 		"chirp_id": chirpId,
-	}).Exec()
+	}).WithContext(ctx).Exec()
 
 	if err != nil {
 		return fmt.Errorf("UpdateChirp: cant execute update query %w", err)
@@ -144,7 +144,7 @@ func (dc *dbChirpRepository) DeleteChirp(ctx context.Context, userId int, chirpI
 	err := dc.db.Query(stmt, names).BindMap(map[string]interface{}{
 		"user_id":  userId,
 		"chirp_id": chirpId,
-	}).Exec()
+	}).WithContext(ctx).Exec()
 
 	if err != nil {
 		return fmt.Errorf("DeleteChirp: could not execute delete query %w", err)
