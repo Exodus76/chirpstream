@@ -60,9 +60,17 @@ func main() {
 	}
 	chirpProxy := httputil.NewSingleHostReverseProxy(chirpURL)
 
+	relUrl, err := url.Parse(cfg.Rel_Service.Addr)
+	if err != nil || chirpURL.Host == "" {
+		log.Fatalf("Invalid chirp service address: %v", cfg.Chirp_Service.Addr)
+	}
+
+	relProxy := httputil.NewSingleHostReverseProxy(relUrl)
+
 	// Set timeouts for the reverse proxies to prevent hanging requests
 	userProxyWithTimeout := http.TimeoutHandler(userProxy, 5*time.Second, "Gateway Timeout")
 	chirpProxyWithTimeout := http.TimeoutHandler(chirpProxy, 5*time.Second, "Gateway Timeout")
+	relProxyWithTimeout := http.TimeoutHandler(relProxy, 5*time.Second, "Gateway Timeout")
 
 	//not using httprouter here as there is no need for a complex router,
 	// we just need to forward requests to the appropriate services based on the path
@@ -71,7 +79,8 @@ func main() {
 	mux.Handle("POST /api/user/register", http.StripPrefix("", userProxyWithTimeout))
 
 	mux.Handle("/api/users/", AuthMiddleware(userProxyWithTimeout))
-	mux.Handle("/api/chirp/", chirpProxyWithTimeout)
+	mux.Handle("/api/chirp/", AuthMiddleware(chirpProxyWithTimeout))
+	mux.Handle("/api/user/", AuthMiddleware(relProxyWithTimeout))
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		response.Error(w, "Not Found", http.StatusNotFound)
 	}))

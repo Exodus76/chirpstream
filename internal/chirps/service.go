@@ -34,15 +34,19 @@ func (s *service) CreateChirp(ctx context.Context, content string, userId int) e
 	return nil
 }
 
+// TODO: make this concurent
 func (s *service) GetChirpById(ctx context.Context, userId int, chirpId gocql.UUID) (*Chirp, error) {
 	user, err := s.userClient.GetUser(ctx, userId)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get user with id: %d %w", userId, err)
+		if err == gocql.ErrNotFound {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
 	}
 
 	chirp, err := s.repo.GetChirpById(ctx, userId, chirpId)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get chirp with id: %s %w", chirpId, err)
+		return nil, err
 	}
 
 	chirp.Name = user.Name

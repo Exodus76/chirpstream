@@ -1,8 +1,10 @@
 package chirps
 
 import (
+	"chirpstream/pkg/apperror"
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/gocql/gocql"
@@ -79,7 +81,12 @@ func (dc *dbChirpRepository) GetChirpById(ctx context.Context, userId int, chirp
 
 	if err != nil {
 		if err == gocql.ErrNotFound {
-			return nil, fmt.Errorf("GetChirpById: chirp with id %s not found", chirpId)
+			// return nil, fmt.Errorf("GetChirpById: chirp with id %s not found", chirpId)
+			return nil, &apperror.RepoError{
+				Op:  "Chirp.GetChirpById",
+				Err: err,
+				ID:  chirpId.String(),
+			}
 		}
 		return nil, fmt.Errorf("GetChirpById: cant execute query %w", err)
 	}
@@ -89,7 +96,14 @@ func (dc *dbChirpRepository) GetChirpById(ctx context.Context, userId int, chirp
 		"chirp_id": chirpId,
 	}).WithContext(ctx).Get(&chirp)
 
-	if err != nil && err != gocql.ErrNotFound {
+	if err != nil {
+		if err == gocql.ErrNotFound {
+			return nil, &apperror.RepoError{
+				Op:  "ChirpStats.GetChirpById",
+				Err: err,
+				ID:  chirpId.String(),
+			}
+		}
 		return nil, fmt.Errorf("GetChirpById: cant execute stats query %w", err)
 	}
 
@@ -115,7 +129,11 @@ func (dc *dbChirpRepository) GetChirpsByUserId(ctx context.Context, userId int, 
 
 	if err != nil {
 		if err == gocql.ErrNotFound {
-			return nil, nil, fmt.Errorf("GetChirpsByUserId: no chirps found for user id %d", userId)
+			return nil, nil, &apperror.RepoError{
+				Op:  "ChirpStats.GetChirpById",
+				Err: err,
+				ID:  strconv.Itoa(userId),
+			}
 		}
 		return nil, nil, fmt.Errorf("GetChirpsByUserId: cant execute query %w", err)
 	}

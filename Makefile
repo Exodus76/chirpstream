@@ -7,8 +7,13 @@ build-apigateway:
 build-user-service:
 	go build -ldflags="-s -w" -o bin/chirpstream-user cmd/user-service/main.go
 
+build-rel-service:
+	go build -ldflags="-s -w" -o bin/chirpstream-relationship cmd/user-relationship/main.go
+# 	go build -tags="gocql_debug" -ldflags="-s -w" -o bin/chirpstream-relationship cmd/user-relationship/main.go
+
 build-chirp-service:
 	go build -ldflags="-s -w" -o bin/chirpstream-chirps cmd/chirp-service/main.go
+# 	go build -tags="gocql_debug" -ldflags="-s -w" -o bin/chirpstream-chirps cmd/chirp-service/main.go
 
 build: build-apigateway build-user-service build-chirp-service
 
@@ -17,6 +22,9 @@ run-apigateway: build-apigateway
 
 run-user: build-user-service
 	./bin/chirpstream-user
+
+run-rel: build-rel-service
+	./bin/chirpstream-relationship
 
 run-chirp: build-chirp-service
 	./bin/chirpstream-chirps

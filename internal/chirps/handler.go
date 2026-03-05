@@ -50,14 +50,14 @@ func (h *Handler) handleCreateChirp(w http.ResponseWriter, r *http.Request, _ ht
 		return
 	}
 
-	user, ok := ctx.Value("user").(*auth.CustomClaim)
+	userId, ok := auth.GetUserIdFromContext(ctx)
 	if !ok {
 		log.Printf("Error: failed getting user from context\n")
 		response.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	err := h.service.CreateChirp(ctx, req.Content, int(user.UserID))
+	err := h.service.CreateChirp(ctx, req.Content, userId)
 	if err != nil {
 		log.Printf("Error: failed creating chirp %v\n", err)
 		response.Error(w, "Something went wrong", http.StatusInternalServerError)
@@ -78,7 +78,7 @@ func (h *Handler) handleUpdateChirpContent(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	user, ok := ctx.Value("user").(*auth.CustomClaim)
+	userId, ok := auth.GetUserIdFromContext(ctx)
 	if !ok {
 		response.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -92,7 +92,7 @@ func (h *Handler) handleUpdateChirpContent(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	err = h.service.UpdateChirp(ctx, int(user.UserID), chirpUUID, req.Content)
+	err = h.service.UpdateChirp(ctx, userId, chirpUUID, req.Content)
 	if err != nil {
 		log.Printf("Error: failed updating chirp %v\n", err)
 		response.Error(w, "Something went wrong", http.StatusInternalServerError)
@@ -105,7 +105,7 @@ func (h *Handler) handleUpdateChirpContent(w http.ResponseWriter, r *http.Reques
 func (h *Handler) handleDeleteChirp(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	ctx := r.Context()
 
-	user, ok := ctx.Value("user").(*auth.CustomClaim)
+	userId, ok := auth.GetUserIdFromContext(ctx)
 	if !ok {
 		log.Printf("Error: failed getting user from context\n")
 		response.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -119,7 +119,7 @@ func (h *Handler) handleDeleteChirp(w http.ResponseWriter, r *http.Request, _ ht
 		response.Error(w, "Something went wrong", http.StatusBadRequest)
 		return
 	}
-	err = h.service.DeleteChirp(ctx, int(user.UserID), chirpUUID)
+	err = h.service.DeleteChirp(ctx, userId, chirpUUID)
 	if err != nil {
 		log.Printf("Error: failed deleting chirp %v\n", err)
 		response.Error(w, "Something went wrong", http.StatusInternalServerError)
@@ -142,14 +142,14 @@ func (h *Handler) handleGetChirpById(w http.ResponseWriter, r *http.Request, p h
 		return
 	}
 
-	user, ok := r.Context().Value("user").(*auth.CustomClaim)
+	userId, ok := auth.GetUserIdFromContext(ctx)
 	if !ok {
 		log.Printf("Error: failed getting user from context\n")
 		response.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	chirp, err = h.service.GetChirpById(ctx, user.UserID, chirpId)
+	chirp, err = h.service.GetChirpById(ctx, userId, chirpId)
 	if err != nil {
 		log.Printf("Error: cant get chirp %v\n", err)
 		response.Error(w, "No chirp found", http.StatusNotFound)

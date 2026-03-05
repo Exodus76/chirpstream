@@ -4,6 +4,7 @@ import (
 	"chirpstream/internal/auth"
 	"chirpstream/pkg/response"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -50,12 +51,11 @@ func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request, _ htt
 
 	ctx := r.Context()
 
+	defer r.Body.Close()
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		response.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-
-	defer r.Body.Close()
 
 	err := h.service.CreateUser(ctx, req.Name, req.Email, req.Password)
 	if err != nil {
@@ -122,7 +122,12 @@ func (h *Handler) handleGetuser(w http.ResponseWriter, r *http.Request, p httpro
 	user, err := h.service.GetUserById(ctx, userId)
 	if err != nil {
 		log.Printf("ERROR: error getting user by id %v\n", err)
+		if errors.Is(err, ErrNotFound) {
+			response.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
 		response.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
 	}
 
 	response.JSON(w, http.StatusOK, user)

@@ -26,17 +26,18 @@ func (s *service) CreateUser(ctx context.Context, name, email, password string) 
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
 	if err != nil {
-		return fmt.Errorf("CreateUser: failed to encrypt password %w", err)
+		return fmt.Errorf("failed to encrypt password %w", err)
 	}
 
 	newUser := &User{
 		Email:    email,
 		Password: string(hashedPassword),
+		Active:   true,
 	}
 
 	err = s.repo.CreateUser(ctx, newUser)
 	if err != nil {
-		return fmt.Errorf("CreateUser: failed to create user %w", err)
+		return err
 	}
 
 	return nil
@@ -45,11 +46,7 @@ func (s *service) CreateUser(ctx context.Context, name, email, password string) 
 func (s *service) VerifyUser(ctx context.Context, email string, password string) (*User, error) {
 	user, err := s.repo.GetUserByEmail(ctx, email)
 	if err != nil {
-		return nil, fmt.Errorf("Error fetching user %w", err)
-	}
-
-	if user == nil {
-		return nil, fmt.Errorf("No user with this email %s, %w", email, err)
+		return nil, err
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
@@ -63,18 +60,19 @@ func (s *service) VerifyUser(ctx context.Context, email string, password string)
 func (s *service) GetUserById(ctx context.Context, id int) (*User, error) {
 	user, err := s.repo.GetUserById(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("Error fetching user %w", err)
-	}
-
-	if user == nil {
-		return nil, fmt.Errorf("No user with this id %d, %w", id, err)
+		return nil, err
 	}
 
 	return user, nil
 }
 
 func (s *service) DeleteUser(ctx context.Context, id int) error {
-	panic("not implemented") // TODO: Implement
+	err := s.repo.DeleteUser(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 //backup

@@ -24,14 +24,14 @@ func main() {
 	}
 
 	//changing chirp db to scylla
-	dbSession, err := database.InitScyllaDb(cfg.Scylladb.Host, cfg.Scylladb.Username, cfg.Scylladb.Password, cfg.Scylladb.Keyspace)
+	dbSession, err := database.InitScyllaDb(cfg.Scylladb.Host, cfg.Scylladb.Username, cfg.Scylladb.Password, cfg.Scylladb.ChirpKeyspace)
 	if err != nil {
 		log.Fatalf("Failed to initialize ScyllaDB: %v\n", err)
 	}
 	defer dbSession.Close()
 
 	//run database migration
-	err = database.Migrate(&dbSession, cfg.Scylladb.Keyspace)
+	err = database.MigrateChirp(&dbSession, cfg.Scylladb.ChirpKeyspace)
 	if err != nil {
 		log.Fatalf("Failed to run database migration: %v\n", err)
 	}

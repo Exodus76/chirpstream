@@ -1,8 +1,10 @@
 package user
 
 import (
+	"chirpstream/pkg/apperror"
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -40,7 +42,7 @@ func (r *dbUserRepository) CreateUser(ctx context.Context, user *User) error {
 
 	_, err := r.db.Exec(ctx, query, user.Name, user.Email, user.Password)
 	if err != nil {
-		return fmt.Errorf("CreateUser: could not insert user: %w", err)
+		return fmt.Errorf("User.CreateUser: could not insert user: %w", err)
 	}
 
 	return nil
@@ -60,9 +62,13 @@ func (r *dbUserRepository) GetUserByEmail(ctx context.Context, email string) (*U
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("GetUserByEmail: no user with this email: %s %w", email, err)
+			return nil, &apperror.RepoError{
+				Op:  "User.GetUserByEmail",
+				Err: ErrNotFound,
+				ID:  email,
+			}
 		}
-		return nil, fmt.Errorf("GetUserbyEmail: failed to execute query %w", err)
+		return nil, fmt.Errorf("User.GetUserbyEmail: failed to execute query %w", err)
 	}
 
 	return &user, nil
@@ -81,9 +87,14 @@ func (r *dbUserRepository) GetUserById(ctx context.Context, id int) (*User, erro
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("GetUserById: no user with this id: %d %w", id, err)
+			// return nil, fmt.Errorf("GetUserById: no user with this id: %d %w", id, err)
+			return nil, &apperror.RepoError{
+				Op:  "user.GetUserById",
+				Err: ErrNotFound,
+				ID:  strconv.Itoa(id),
+			}
 		}
-		return nil, fmt.Errorf("GetUserById: failed to execute query %w", err)
+		return nil, fmt.Errorf("User.UserGetUserById: failed to execute query %w", err)
 	}
 
 	return &user, nil
@@ -118,7 +129,12 @@ func (r *dbUserRepository) DeleteUser(ctx context.Context, id int) error {
 	}
 
 	if commandTag.RowsAffected() != 1 {
-		return fmt.Errorf("DeleteUser: could not delete user with id:%d %w", id, err)
+		// return fmt.Errorf("DeleteUser: could not delete user with id:%d %w", id, err)
+		return &apperror.RepoError{
+			Op:  "User.DeleteUser",
+			Err: err,
+			ID:  strconv.Itoa(id),
+		}
 	}
 
 	return nil

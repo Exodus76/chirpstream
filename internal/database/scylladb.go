@@ -10,8 +10,10 @@ import (
 func InitScyllaDb(host []string, username string, password string, keyspace string) (gocqlx.Session, error) {
 	cluster := gocql.NewCluster(host...)
 
+	// no need to verify
+	cluster.IgnorePeerAddr = true
 	cluster.Authenticator = gocql.PasswordAuthenticator{Username: username, Password: password}
-	cluster.PoolConfig.HostSelectionPolicy = gocql.TokenAwareHostPolicy(gocql.DCAwareRoundRobinPolicy("AWS_AP_SOUTH_1"))
+	// cluster.PoolConfig.HostSelectionPolicy = gocql.TokenAwareHostPolicy(gocql.DCAwareRoundRobinPolicy("AWS_AP_SOUTH_1"))
 	cluster.Keyspace = keyspace
 
 	session, err := gocqlx.WrapSession(cluster.CreateSession())

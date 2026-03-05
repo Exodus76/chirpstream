@@ -8,36 +8,38 @@ import (
 )
 
 type ServiceConfig struct {
-	Addr string `yaml:"addr"`
+	Addr string `mapstructure:"addr"`
 }
 
 type DBConfig struct {
-	Driver   string `yaml:"driver"`
-	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	DBName   string `yaml:"dbname"`   // Used for SQL DBs
-	Keyspace string `yaml:"keyspace"` // Used for Scylla/Cassandra
+	Driver   string `mapstructure:"driver"`
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	User     string `mapstructure:"user"`
+	Password string `mapstructure:"password"`
+	DBName   string `mapstructure:"dbname"`   // Used for SQL DBs
+	Keyspace string `mapstructure:"keyspace"` // Used for Scylla/Cassandra
 }
 
 type scylladbConfig struct {
-	Keyspace string   `yaml:"keyspace"`
-	Host     []string `yaml:"host"`
-	Username string   `yaml:"username"`
-	Password string   `yaml:"password"`
+	ChirpKeyspace    string   `mapstructure:"chirp_keyspace"`
+	RelationKeyspace string   `mapstructure:"relationship_keyspace"`
+	Host             []string `mapstructure:"host"`
+	Username         string   `mapstructure:"username"`
+	Password         string   `mapstructure:"password"`
 }
 
 type Config struct {
 	Databases struct {
-		Users      DBConfig `yaml:"users"`
-		Users_Test DBConfig `yaml:"users_test"`
-		Chirps     DBConfig `yaml:"chirps"`
-	} `yaml:"databases"`
-	Scylladb      scylladbConfig `yaml:"scylladb"`
-	API_Gateway   ServiceConfig  `yaml:"api_gateway"`
-	User_Service  ServiceConfig  `yaml:"user_service"`
-	Chirp_Service ServiceConfig  `yaml:"chirp_service"`
+		Users      DBConfig `mapstructure:"users"`
+		Users_Test DBConfig `mapstructure:"users_test"`
+		Chirps     DBConfig `mapstructure:"chirps"`
+	} `mapstructure:"databases"`
+	Scylladb      scylladbConfig `mapstructure:"scylladb"`
+	API_Gateway   ServiceConfig  `mapstructure:"api_gateway"`
+	User_Service  ServiceConfig  `mapstructure:"user_service"`
+	Chirp_Service ServiceConfig  `mapstructure:"chirp_service"`
+	Rel_Service   ServiceConfig  `mapstructure:"rel_service"`
 }
 
 func Init(configPath string) (config Config, err error) {
